@@ -83,7 +83,6 @@ def main_table(settlement_df):
     settlement_analysis['Total Units'] = settlement_analysis['Units Sold'] + settlement_analysis['Non-Sale Units']
     settlement_analysis = pd.concat([settlement_analysis, get_salesbased_revenue(settlement_df), get_commission(settlement_df),get_fba_fees(settlement_df), get_nonsales_revenue(settlement_df)], axis=1)
     settlement_analysis['Total Revenue'] = settlement_analysis['Sales Revenue'] + settlement_analysis['Commission'] + settlement_analysis['FBA Fees'] + settlement_analysis['Non-Sales Revenue'] 
-    #TODO sort by total revenue
     return settlement_analysis.sort_values('Total Revenue', ascending=False)
 
 def get_non_skus(settlement_df):
