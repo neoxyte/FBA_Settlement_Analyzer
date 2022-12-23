@@ -20,7 +20,7 @@ pd.set_option("display.max_colwidth", None)
     "marketplace-name": "category",
     "amount-type": "category",
     "amount-description": "category",
-    "amount": "category",
+    "amount": "float64",
     "fulfillment-id": "category",
     "posted-date": "category",
     "posted-date-time": "category",
@@ -28,7 +28,7 @@ pd.set_option("display.max_colwidth", None)
     "merchant-order-item-id": "category",
     "merchant-adjustment-item-id": "category",
     "sku": "category",
-    "quantity-purchased": "category",
+    "quantity-purchased": "float64",
     "promotion-id": "category",
 }'''
 
