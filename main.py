@@ -106,16 +106,24 @@ def get_storage(settlement_df):
     storage_fee = storage_fee[['amount-description', 'amount']]
     return storage_fee
 
-def print_report(finalized_report):
-    '''Print report. Currently its CSV but I will make this excel with multiple worksheets'''
-    return finalized_report.to_csv(input('Desired Output File Name: '))
+def export_report(finalized_report, nonsku_report, filename):
+    '''Export to Excel with multiple Worksheets'''
+    writer = pd.ExcelWriter(filename + ".xlsx", engine='openpyxl')
+    finalized_report.to_excel(writer, sheet_name='Overview')
+    nonsku_report.to_excel(writer, sheet_name='Non SKU line items')
+
+
+    writer.save()
+    writer.close()
+    return "Exported to Excel as " + filename
 
 settlement_df = pd.read_table(input("Statement File Name: "), sep='\t', dtype=dtypes)
-print_report(main_table(settlement_df))
+export_report(main_table(settlement_df), get_non_skus(settlement_df), input("Output filename?: "))
+
 
 #TODO
 #Tie in Monthly Storage to SKU
-#Write all line items accounted for and non accounted for and double check final report against access
+#Add in progress bar / status text
 
 
 '''Personal Notes'''
@@ -124,3 +132,4 @@ print_report(main_table(settlement_df))
 #compensated clawback no units potentially involved, look into in future
 # "FBA Pick and Pack Fee" return reimbursement does not have SKUS accounted for in report. So have to add that somehow, for now ill add it as a nonsku item
 #add something that checks if taxes cancel out properly
+
