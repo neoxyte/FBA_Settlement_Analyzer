@@ -157,3 +157,6 @@ test1.csv
 test_output.csv
 Main Notebook.ipynb
 test_statement.txt
+Main Notebook.ipynb
+*.csv
+*.ipynb
