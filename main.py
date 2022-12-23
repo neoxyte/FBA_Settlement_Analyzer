@@ -29,16 +29,37 @@ dtypes = {
     "merchant-order-item-id": "category",
     "merchant-adjustment-item-id": "category",
     "sku": "category",
-    "quantity-purchased": "int64",
+    "quantity-purchased": "Int64",
     "promotion-id": "category",
 }
 
-#open file
-df = pd.read_table('statement.txt', sep='\t', dtype=dtypes)
 
-#obtain total of fba Fees
-fba_fee_by_sku = df.loc[df['amount-description'] == 'FBAPerUnitFulfillmentFee']
-fba_fee_by_sku = pd.melt(fba_fee_by_sku , id_vars =['sku'], value_vars =['amount'])
-fba_fee_by_sku.groupby("sku")
+settlement_df = pd.read_table('statement.txt', sep='\t', dtype=dtypes)
 
-#do top three lines for each line item needed
+
+def get_units_sold(settlement_df):
+    '''gets all lines where amount-description = FBAPerUnitFulfillmentFee (these are actual sales)'''
+    units_sold = settlement_df.loc[settlement_df['amount-description'] == 'FBAPerUnitFulfillmentFee']
+    units_sold = units_sold[['sku','quantity-purchased']]
+    units_sold = units_sold.groupby('sku').sum()
+    return units_sold.rename(columns={'quantity-purchased':'Units Sold'})
+
+def get_nonsales_units(settlement_df):
+    '''Returns units taken from inventory but not as sale'''
+    #FREE_REPLACEMENT_REFUND_ITEMS Or WAREHOUSE_DAMAGE Or "WAREHOUSE_LOST
+    #compensated clawback no units potentially involved, look into in future
+    ns_units = settlement_df.loc[(settlement_df['amount-description'] == 'WAREHOUSE_LOST') | (settlement_df['amount-description'] == 'WAREHOUSE_DAMAGE') | (settlement_df['amount-description'] == 'FREE_REPLACEMENT_REFUND_ITEMS')]
+    ns_units = ns_units[['sku', 'quantity-purchased']]
+    ns_units = ns_units.groupby('sku').sum()
+    return ns_units.rename(columns={'quantity-purchased':'Non-Sale Units'})
+
+
+settlement_analysis = pd.concat([get_units_sold(settlement_df), get_nonsales_units(settlement_df)], axis=1)
+#gets total units
+settlement_analysis['Total Units'] = settlement_analysis['Units Sold'] + settlement_analysis['Non-Sale Units']
+
+#TODO
+#get sales based revenue
+
+#"Commission" Or "FBAPerOrderFulfillmentFee" Or "FBAPerUnitFulfillmentFee" Or "FBAWeightBasedFee" Or "Principal"
+def get_nonsales_units(settlement_df):
