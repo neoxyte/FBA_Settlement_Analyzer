@@ -6,13 +6,14 @@ pd.set_option('display.width', None)
 pd.set_option("display.max_colwidth", None)
 
 #data types for settlement flat file v2
-'''dtypes = {
+dtypes = {
     "settlement-id": "category",
     "settlement-start-date": "category",
     "settlement-end-date": "category",
     "deposit-date": "category",
     "total-amount": "category",
     "currency": "category",
+    "transaction-type": "category",
     "order-id": "category",
     "merchant-order-id": "category",
     "adjustment-id": "category",
@@ -28,13 +29,12 @@ pd.set_option("display.max_colwidth", None)
     "merchant-order-item-id": "category",
     "merchant-adjustment-item-id": "category",
     "sku": "category",
-    "quantity-purchased": "float64",
+    "quantity-purchased": "int64",
     "promotion-id": "category",
-}'''
+}
 
 #open file
-df = pd.read_table('statement.txt', sep='\t', low_memory=False)
-
+df = pd.read_table('statement.txt', sep='\t', dtype=dtypes)
 
 #obtain total of fba Fees
 fba_fee_by_sku = df.loc[df['amount-description'] == 'FBAPerUnitFulfillmentFee']
