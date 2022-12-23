@@ -38,21 +38,24 @@ settlement_df = pd.read_table('statement.txt', sep='\t', dtype=dtypes)
 
 
 def get_units_sold(settlement_df):
-    '''gets all lines where amount-description = FBAPerUnitFulfillmentFee (these are actual sales)'''
+    '''Get's all units sold (only units charged an fba fee count here'''
     units_sold = settlement_df.loc[settlement_df['amount-description'] == 'FBAPerUnitFulfillmentFee']
     units_sold = units_sold[['sku','quantity-purchased']]
     units_sold = units_sold.groupby('sku').sum()
     return units_sold.rename(columns={'quantity-purchased':'Units Sold'})
 
 def get_nonsales_units(settlement_df):
-    '''Returns units taken from inventory but not as sale'''
+    '''Returns units taken from inventory and compensated but not as sale'''
     #FREE_REPLACEMENT_REFUND_ITEMS Or WAREHOUSE_DAMAGE Or "WAREHOUSE_LOST
-    #compensated clawback no units potentially involved, look into in future
     ns_units = settlement_df.loc[(settlement_df['amount-description'] == 'WAREHOUSE_LOST') | (settlement_df['amount-description'] == 'WAREHOUSE_DAMAGE') | (settlement_df['amount-description'] == 'FREE_REPLACEMENT_REFUND_ITEMS')]
     ns_units = ns_units[['sku', 'quantity-purchased']]
     ns_units = ns_units.groupby('sku').sum()
     return ns_units.rename(columns={'quantity-purchased':'Non-Sale Units'})
 
+#notes for other units we have to figure out how they are accounted
+#this report is just for a general idea of unit movement and should not be used for inventory management
+#we can compare inventory reports against settlement reports in the future
+#compensated clawback no units potentially involved, look into in future
 
 settlement_analysis = pd.concat([get_units_sold(settlement_df), get_nonsales_units(settlement_df)], axis=1)
 #gets total units
