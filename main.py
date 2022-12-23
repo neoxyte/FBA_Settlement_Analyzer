@@ -1,4 +1,5 @@
 import pandas as pd
+import xlsxwriter
 
 #This stops data truncation
 pd.set_option('display.max_columns', None)
@@ -108,12 +109,13 @@ def get_storage(settlement_df):
 
 def export_report(finalized_report, nonsku_report, filename):
     '''Export to Excel with multiple Worksheets'''
-    writer = pd.ExcelWriter(filename + ".xlsx", engine='openpyxl')
+    writer = pd.ExcelWriter(filename + ".xlsx", engine='xlsxwriter')
     finalized_report.to_excel(writer, sheet_name='Overview')
     nonsku_report.to_excel(writer, sheet_name='Non SKU line items')
-
-
-    writer.save()
+    for column in finalized_report:
+        column_length = max(finalized_report[column].astype(str).map(len).max(), len(column))
+        col_idx = finalized_report.columns.get_loc(column)
+        writer.sheets['Overview'].set_column(col_idx, col_idx, column_length)
     writer.close()
     return "Exported to Excel as " + filename
 
