@@ -82,27 +82,30 @@ def main_table(settlement_df):
     settlement_analysis = pd.concat([get_units_sold(settlement_df), get_nonsales_units(settlement_df)], axis=1)
     settlement_analysis['Total Units'] = settlement_analysis['Units Sold'] + settlement_analysis['Non-Sale Units']
     settlement_analysis = pd.concat([settlement_analysis, get_salesbased_revenue(settlement_df), get_commission(settlement_df),get_fba_fees(settlement_df), get_nonsales_revenue(settlement_df)], axis=1)
-    settlement_analysis['Total Revenue'] =settlement_analysis['Sales Revenue'] + settlement_analysis['Commission'] + settlement_analysis['FBA Fees'] + settlement_analysis['Non-Sales Revenue'] 
-    return settlement_analysis
+    settlement_analysis['Total Revenue'] = settlement_analysis['Sales Revenue'] + settlement_analysis['Commission'] + settlement_analysis['FBA Fees'] + settlement_analysis['Non-Sales Revenue'] 
+    #TODO sort by total revenue
+    return settlement_analysis.sort_values('Total Revenue', ascending=False)
+
+def get_non_skus(settlement_df):
+    '''Gets line items without a SKU  from the flat file. Such as Subscription, Monthly Storage, Reserve, Etc'''
+    #perhaps look into doing inverse logic next time
+    nonskus= settlement_df.loc[(settlement_df['amount-description'] == 'Storage Fee') | (settlement_df['amount-description'] == 'Subscription Fee')|
+    (settlement_df['amount-description'] == 'Previous Reserve Amount Balance') | (settlement_df['amount-description'] == 'Current Reserve Amount') |
+    (settlement_df['amount-description'] == 'RemovalComplete') | (settlement_df['amount-description'] == 'Adjustment')|
+    (settlement_df['amount-description'] == 'DisposalComplete') | (settlement_df['amount-description'] == 'FBACustomerReturnPerUnitFee') |
+    (settlement_df['amount-description'] == 'Shipping label purchase') | (settlement_df['amount-description'] == 'Shipping label purchase for return') |
+    (settlement_df['amount-description'] == 'INCORRECT_FEES_NON_ITEMIZED') | (settlement_df['amount-description'] == 'FBAInboundTransportationFee')|
+    (settlement_df['amount-description'] == 'FBA Pick & Pack Fee') ]
+    nonskus = nonskus[['amount-description', 'amount']]
+    nonskus = nonskus.groupby('amount-description').sum()
+    nonskus = nonskus.loc[~(nonskus==0).all(axis=1)]
+    return nonskus
 
 def get_storage(settlement_df):
+    '''Gets storage Fee'''
     storage_fee = settlement_df.loc[(settlement_df['amount-description'] == 'Storage Fee')]
     storage_fee = storage_fee[['amount-description', 'amount']]
     return storage_fee
-
-'''def nonsku_table(settlement_df):
-    nonsku_df=  settlement_df[['sku', 'amount']]
-    return print('Non SKU Table')
-    SKU: IIf([Current_statement]![sku] Is Not Null,[Current_statement]![sku],Switch([amount-description]="Previous Reserve Amount Balance","00-PREVIOUS_RESERVE_BALANCE",
-    [amount-description]="Current Reserve Amount","00-CURRENT_RESERVE_BALANCE",
-    [amount-description]="RemovalComplete","00-REMOVALS_TOTAL",[amount-description]="Adjustment","00-ADJUSTMENT",
-    [amount-description]="DisposalComplete","00-DISPOSAL_TOTAL",[amount-description]="FBACustomerReturnPerUnitFee",
-    "00-CUSTOMER_UNIT_RETURN",[amount-description]="Shipping label purchase","00-SHIPPING_LABELS_TOTAL",[amount-description]="Storage Fee",
-    "00-STORAGE_MONTHLY_FEE",[amount-description]="Shipping label purchase for return","00-SHIPPING_LABEL_RETURN",[amount-description]="Subscription Fee",
-    "00-SUBSCRIPTION",[amount-description]="INCORRECT_FEES_NON_ITEMIZED","00-INCORRECT_FEE_NON_ITEMIZED",[amount-description]="FBAInboundTransportationFee","00-FBAINBOUNDTRANSPORTFEE"))
-'''
-
-
 
 def print_report(finalized_report):
     '''Print report. Currently its CSV but I will make this excel with multiple worksheets'''
@@ -112,13 +115,12 @@ settlement_df = pd.read_table(input("Statement File Name: "), sep='\t', dtype=dt
 print_report(main_table(settlement_df))
 
 #TODO
-#Get all the non sku items into it's own spot
 #Tie in Monthly Storage to SKU
 #Write all line items accounted for and non accounted for and double check final report against access
 
 
 '''Personal Notes'''
-#this report is just for a general idea of unit movement and should not be used for inventory management
+#this report is just for a general idea of unit movement and should not be used for inventory management just yet
 #we can compare inventory reports against settlement reports in the future
 #compensated clawback no units potentially involved, look into in future
 # "FBA Pick and Pack Fee" return reimbursement does not have SKUS accounted for in report. So have to add that somehow, for now ill add it as a nonsku item
