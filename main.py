@@ -102,7 +102,6 @@ def get_storage(settlement_df):
 def monthly_storage_charged(settlement_df):
     '''Returns True/False if monthly storaged was charged'''
     #confirm if this works with a previous report that doesn't have storage
-    print("Checking if monthly storage was charged") 
     return get_storage(settlement_df) != 0
 
 def get_storage_with_sku(monthly_storage_df, manage_fba_inventory_df):
@@ -138,25 +137,36 @@ def export_report(finalized_report, nonsku_report, filename):
         col_idx = finalized_report.columns.get_loc(column)
         writer.sheets['Overview'].set_column(col_idx, col_idx, column_length)
     writer.close()
-    return "Exported to Excel as " + filename
-
+    print("Exported to Excel as " + filename)
+    return True
+    
+def get_statement_period(settlement_df):
+    '''Returns a list with start and end date'''
+    dates = settlement_df [settlement_df ['settlement-start-date'].notna()][['settlement-start-date', 'settlement-end-date']] 
+    statement_start_date = dates.iloc[0][0]
+    statement_end_date = dates.iloc[0][1]
+    statement_period = [statement_start_date, statement_end_date]
+    return statement_period
+    
 settlement_df = pd.read_table(input("Statement File Name: "), sep='\t', dtype=dtypes)
-#get dates here to print out as status text
+statement_timeframe =  get_statement_period(settlement_df)
+print("\nStatement period start time: " + statement_timeframe[0])
+print("Statement period end time: " + statement_timeframe[1])
 
-#import storage if a monthly storage fee is detected
-if monthly_storage_charged:
-    storage_report = input("Monthly Storage was charged in this statement. \nMonthly Storage Report CSV name:")
+
+if monthly_storage_charged(settlement_df):
+    storage_report = input("\nMonthly Storage was charged in this statement. Please enter corresponding monthly storage report and Manage FBA Inventory archive report. \n\nMonthly Storage Report CSV name: ")
     monthly_storage_df =  pd.read_csv(storage_report, encoding='latin1')
     fba_inventory_report = input("Manage FBA Inventory Archive CSV report name: ")
     manage_fba_inventory_df = pd.read_csv(fba_inventory_report, encoding = 'latin1')
     storage_sku_df = get_storage_with_sku(monthly_storage_df, manage_fba_inventory_df)
-
-export_report(main_table(settlement_df), get_non_skus(settlement_df), input("Output filename?: "))
+advertising_df =[]
+export_report(main_table(settlement_df), get_non_skus(settlement_df), input("\nOutput filename?: "))
 
 #TODO
 #Add in status text
 #get rows where SKU is non existant (only showing as FNSKU) and put it in a seperate tab of report
-
+#add dates and other stuff as status text on imports
 #Personal Notes
 #this report is just for a general idea of unit movement and should not be used for inventory management just yet
 #we can compare inventory reports against settlement reports in the future
