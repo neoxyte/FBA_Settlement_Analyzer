@@ -121,7 +121,6 @@ def main_table(settlement_df):
     settlement_analysis['Total Units'] = settlement_analysis['Units Sold'] + settlement_analysis['Non-Sale Units']
     settlement_analysis = pd.concat([settlement_analysis, get_salesbased_revenue(settlement_df), get_commission(settlement_df),get_fba_fees(settlement_df), get_nonsales_revenue(settlement_df)], axis=1)
     settlement_analysis['Total Revenue'] = settlement_analysis['Sales Revenue'] + settlement_analysis['Commission'] + settlement_analysis['FBA Fees'] + settlement_analysis['Non-Sales Revenue'] 
-    #if storage is charged add it
     if monthly_storage_charged(settlement_df):
         settlement_analysis = pd.concat([settlement_analysis, storage_sku_df], axis=1)
     #todo change 0 revenue items with a storage charge to 0 in all other columns
@@ -149,10 +148,10 @@ def get_statement_period(settlement_df):
     return statement_period
     
 settlement_df = pd.read_table(input("Statement File Name: "), sep='\t', dtype=dtypes)
+
 statement_timeframe =  get_statement_period(settlement_df)
 print("\nStatement period start time: " + statement_timeframe[0])
 print("Statement period end time: " + statement_timeframe[1])
-
 
 if monthly_storage_charged(settlement_df):
     storage_report = input("\nMonthly Storage was charged in this statement. Please enter corresponding monthly storage report and Manage FBA Inventory archive report. \n\nMonthly Storage Report CSV name: ")
@@ -160,13 +159,17 @@ if monthly_storage_charged(settlement_df):
     fba_inventory_report = input("Manage FBA Inventory Archive CSV report name: ")
     manage_fba_inventory_df = pd.read_csv(fba_inventory_report, encoding = 'latin1')
     storage_sku_df = get_storage_with_sku(monthly_storage_df, manage_fba_inventory_df)
-advertising_df =[]
+if input("Would you like to add advertising(y/n): ").lower() == 'y':
+    advertising_report = input("\nSponsored products CSV report name: ")
+    advertising_df = pd.read_csv(advertising_report, encoding='latin1')
+
 export_report(main_table(settlement_df), get_non_skus(settlement_df), input("\nOutput filename?: "))
 
 #TODO
 #Add in status text
 #get rows where SKU is non existant (only showing as FNSKU) and put it in a seperate tab of report
 #figure out how to calculate units for MFN
+#make all storage fees negative
 
 #Personal Notes
 #this report is just for a general idea of unit movement and should not be used for inventory management just yet
