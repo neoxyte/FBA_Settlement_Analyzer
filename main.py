@@ -118,11 +118,16 @@ def export_report(finalized_report, nonsku_report, filename):
     writer.close()
     return "Exported to Excel as " + filename
 
+def monthly_storage_charged(settlement_df):
+    '''Returns True/False if monthly storaged was charged'''
+    
+    return True
+
 settlement_df = pd.read_table(input("Statement File Name: "), sep='\t', dtype=dtypes)
 export_report(main_table(settlement_df), get_non_skus(settlement_df), input("Output filename?: "))
 
 
-
+#todo see if monthly storage is charged
 
 #TODO
 #Tie in Monthly Storage to SKU
