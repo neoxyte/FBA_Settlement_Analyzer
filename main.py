@@ -153,11 +153,7 @@ if monthly_storage_charged:
 
 export_report(main_table(settlement_df), get_non_skus(settlement_df), input("Output filename?: "))
 
-
-#todo see if monthly storage is charged
-
 #TODO
-#Tie in Monthly Storage to SKU
 #Add in status text
 #get rows where SKU is non existant (only showing as FNSKU) and put it in a seperate tab of report
 
