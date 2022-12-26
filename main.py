@@ -31,7 +31,7 @@ dtypes = {
     "merchant-adjustment-item-id": "category",
     "sku": "category",
     "quantity-purchased": "Int64",
-    "promotion-id": "category",``
+    "promotion-id": "category",
 }
 
 def get_units_sold(settlement_df):
@@ -83,6 +83,7 @@ def main_table(settlement_df):
     settlement_analysis['Total Units'] = settlement_analysis['Units Sold'] + settlement_analysis['Non-Sale Units']
     settlement_analysis = pd.concat([settlement_analysis, get_salesbased_revenue(settlement_df), get_commission(settlement_df),get_fba_fees(settlement_df), get_nonsales_revenue(settlement_df)], axis=1)
     settlement_analysis['Total Revenue'] = settlement_analysis['Sales Revenue'] + settlement_analysis['Commission'] + settlement_analysis['FBA Fees'] + settlement_analysis['Non-Sales Revenue'] 
+
     return settlement_analysis.sort_values('Total Revenue', ascending=False)
 
 def get_non_skus(settlement_df):
@@ -104,7 +105,22 @@ def get_storage(settlement_df):
     '''Gets storage Fee'''
     storage_fee = settlement_df.loc[(settlement_df['amount-description'] == 'Storage Fee')]
     storage_fee = storage_fee[['amount-description', 'amount']]
+    storage_fee = storage_fee['amount'].sum()
     return storage_fee
+
+def monthly_storage_charged(settlement_df):
+    '''Returns True/False if monthly storaged was charged'''
+    #confirm if this works with a previous report that doesn't have storage
+    print("Checking if monthly storage was charged") 
+    print("Storage Fee: " + get_storage(settlement_df)) #comment this out after debug
+    return get_storage(settlement_df) != 0
+
+def get_storage_with_sku(monthly_storage_df, manage_fba_inventory_df):
+    '''Returns a data frame with monthly storage by SKU'''
+    sku_fnsku = manage_fba_inventory_df[['sku', 'fnsku']]
+    monthly_storage = monthly_storage_df[['fnsku', 'estimated_monthly_storage_fee']]
+    #sum monthly storage by sku
+    return True
 
 def export_report(finalized_report, nonsku_report, filename):
     '''Export to Excel with multiple Worksheets'''
@@ -118,12 +134,18 @@ def export_report(finalized_report, nonsku_report, filename):
     writer.close()
     return "Exported to Excel as " + filename
 
-def monthly_storage_charged(settlement_df):
-    '''Returns True/False if monthly storaged was charged'''
-    
-    return True
-
 settlement_df = pd.read_table(input("Statement File Name: "), sep='\t', dtype=dtypes)
+#get dates here to print out as status text
+
+#import storage if a monthly storage fee is detected
+if monthly_storage_charged:
+    storage_report = input("Monthly Storage was charged in this statement. \nMonthly Storage Report CSV name:")
+    #possible show dates or time range before the question?
+    monthly_storage_df =  pd.read_csv(storage_report, encoding='latin1')
+    fba_inventory_report = input("Manage FBA Inventory CSV: ")
+    manage_fba_inventory_df = pd.read_csv(fba_inventory_report, encoding = 'latin1')
+    storage_sku_df = get_storage_with_sku(monthly_storage_df, manage_fba_inventory_df)
+
 export_report(main_table(settlement_df), get_non_skus(settlement_df), input("Output filename?: "))
 
 
@@ -131,10 +153,10 @@ export_report(main_table(settlement_df), get_non_skus(settlement_df), input("Out
 
 #TODO
 #Tie in Monthly Storage to SKU
-#Add in progress bar / status text
+#Add in status text
 
 
-'''Personal Notes'''
+#Personal Notes
 #this report is just for a general idea of unit movement and should not be used for inventory management just yet
 #we can compare inventory reports against settlement reports in the future
 #compensated clawback no units potentially involved, look into in future
