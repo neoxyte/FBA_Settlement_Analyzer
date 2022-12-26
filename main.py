@@ -137,7 +137,6 @@ def export_report(finalized_report, nonsku_report, filename):
         writer.sheets['Overview'].set_column(col_idx, col_idx, column_length)
     writer.close()
     print("Exported to Excel as " + filename)
-    return True
 
 def get_statement_period(settlement_df):
     '''Returns a list with start and end date'''
@@ -159,9 +158,10 @@ if monthly_storage_charged(settlement_df):
     fba_inventory_report = input("Manage FBA Inventory Archive CSV report name: ")
     manage_fba_inventory_df = pd.read_csv(fba_inventory_report, encoding = 'latin1')
     storage_sku_df = get_storage_with_sku(monthly_storage_df, manage_fba_inventory_df)
-if input("Would you like to add advertising(y/n): ").lower() == 'y':
-    advertising_report = input("\nSponsored products CSV report name: ")
-    advertising_df = pd.read_csv(advertising_report, encoding='latin1')
+if input("\nWould you like to add advertising(y/n): ").lower() == 'y':
+    print("Please input filename for advertising xlsx report for the appropiate time range.")
+    advertising_report = input("Sponsored products XLSX report name: ")
+    advertising_df = pd.read_excel(advertising_report)
 
 export_report(main_table(settlement_df), get_non_skus(settlement_df), input("\nOutput filename?: "))
 
