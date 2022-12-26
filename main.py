@@ -139,7 +139,7 @@ def export_report(finalized_report, nonsku_report, filename):
     writer.close()
     print("Exported to Excel as " + filename)
     return True
-    
+
 def get_statement_period(settlement_df):
     '''Returns a list with start and end date'''
     dates = settlement_df [settlement_df ['settlement-start-date'].notna()][['settlement-start-date', 'settlement-end-date']] 
@@ -166,7 +166,8 @@ export_report(main_table(settlement_df), get_non_skus(settlement_df), input("\nO
 #TODO
 #Add in status text
 #get rows where SKU is non existant (only showing as FNSKU) and put it in a seperate tab of report
-#add dates and other stuff as status text on imports
+#figure out how to calculate units for MFN
+
 #Personal Notes
 #this report is just for a general idea of unit movement and should not be used for inventory management just yet
 #we can compare inventory reports against settlement reports in the future
