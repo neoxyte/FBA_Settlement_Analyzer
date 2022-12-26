@@ -31,9 +31,8 @@ dtypes = {
     "merchant-adjustment-item-id": "category",
     "sku": "category",
     "quantity-purchased": "Int64",
-    "promotion-id": "category",
+    "promotion-id": "category",``
 }
-
 
 def get_units_sold(settlement_df):
     '''Get's all units sold (only units charged an fba fee count here'''
@@ -121,6 +120,8 @@ def export_report(finalized_report, nonsku_report, filename):
 
 settlement_df = pd.read_table(input("Statement File Name: "), sep='\t', dtype=dtypes)
 export_report(main_table(settlement_df), get_non_skus(settlement_df), input("Output filename?: "))
+
+
 
 
 #TODO
