@@ -1,5 +1,6 @@
 import pandas as pd
 import xlsxwriter
+import numpy as np
 
 #ignores runtime warnings
 import warnings
@@ -46,6 +47,13 @@ def get_nonsales_units(settlement_df):
     ns_units = ns_units[['sku', 'quantity-purchased']]
     ns_units = ns_units.groupby('sku').sum()
     return ns_units.rename(columns={'quantity-purchased':'Non-Sale Units'})
+
+def get_merchantfulfilled_units(settlement_df):
+    mf_units = settlement_df.loc[(settlement_df['fulfillment-id']== 'MFN') & (settlement_df['amount-description']=='Principal')]
+    mf_units = mf_units[['sku', 'quantity-purchased']]
+    mf_units = mf_units.groupby('sku').sum()
+    mf_units.loc[~(mf_units==0).all(axis=1)]
+    return mf_units.rename(columns={'quantity-purchased':'Merchant Fulfilled Units'})
 
 def get_salesbased_revenue(settlement_df):
     '''returns the column for sales based revenue (only comission without fees'''
@@ -138,8 +146,8 @@ def get_cost(helium10_df):
 
 def main_table(settlement_df):
     '''Returns a dataframe consisting of all columns'''
-    settlement_analysis = pd.concat([asins_and_skus_df, get_units_sold(settlement_df), get_nonsales_units(settlement_df)], axis=1)
-    settlement_analysis['Total Units'] = settlement_analysis['Units Sold'] + settlement_analysis['Non-Sale Units']
+    settlement_analysis = pd.concat([asins_and_skus_df, get_units_sold(settlement_df), get_nonsales_units(settlement_df), get_merchantfulfilled_units(settlement_df)], axis=1)
+    settlement_analysis['Total Units'] = settlement_analysis['Units Sold'] + settlement_analysis['Non-Sale Units'] + settlement_analysis['Merchant Fulfilled Units']
     settlement_analysis = pd.concat([settlement_analysis, get_salesbased_revenue(settlement_df), get_commission(settlement_df),get_fba_fees(settlement_df), get_nonsales_revenue(settlement_df)], axis=1)
     settlement_analysis['Amazon Revenue'] = settlement_analysis['Sales Revenue'] + settlement_analysis['Commission'] + settlement_analysis['FBA Fees'] + settlement_analysis['Non-Sales Revenue'] 
     settlement_analysis['Amazon Revenue'] = settlement_analysis['Amazon Revenue'].fillna(0)
@@ -154,13 +162,14 @@ def main_table(settlement_df):
     index_dropping = settlement_analysis[(settlement_analysis['Amazon Revenue'] ==0) & (settlement_analysis['Advertising Spend'] ==0) & (settlement_analysis['Total Return'] ==0)].index
     settlement_analysis.drop(index_dropping, inplace=True)
     settlement_analysis['Total Units'].fillna(0, inplace=True)
-    settlement_analysis = settlement_analysis.dropna(subset=['Total Return'])
     settlement_analysis['Return Per Unit'] = settlement_analysis['Total Return'] /  settlement_analysis['Total Units']
     settlement_analysis = pd.concat([settlement_analysis, product_cost_df], axis=1)
     #calculates total cost for all units sold, in the future add MFN units
     settlement_analysis.fillna({'Packing Cost':0, 'Cost Per Unit':0, 'Product Cost': 0}, inplace=True)
     settlement_analysis['Total Cost'] = settlement_analysis['Cost Per Unit'] * settlement_analysis['Total Units'] * -1
     settlement_analysis['Total Profit'] = settlement_analysis['Total Cost'] + settlement_analysis['Total Return'] 
+    settlement_analysis.replace([np.inf, -np.inf], np.nan, inplace=True)
+    settlement_analysis = settlement_analysis.dropna(subset=['Total Return'])
     return settlement_analysis.sort_values('Total Profit', ascending=False)
     
 def export_report(finalized_report, nonsku_report, filename):
