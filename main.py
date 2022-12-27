@@ -1,5 +1,7 @@
 import pandas as pd
 import xlsxwriter
+import warnings
+warnings.filterwarnings("ignore")
 
 #This stops data truncation
 pd.set_option('display.max_columns', None)
@@ -131,9 +133,9 @@ def get_advertising_spend(advertising_df):
 def get_cost(helium10_df):
     cost = helium10_df[['SKU','PRODUCT COST', 'SHIPPING COST']]
     cost = cost.rename(columns={"SKU": 'sku', 'PRODUCT COST': 'Product Cost', 'SHIPPING COST': 'Packing Cost'})
-    cost['Total Cost'] = cost['Product Cost']  + cost['Packing Cost']
-    index_dropping = cost[cost['Total Cost'] ==0].index
-    cost.groupby('sku').sum()
+    cost['Cost Per Unit'] = cost['Product Cost']  + cost['Packing Cost']
+    cost = cost.groupby('sku').sum()
+    index_dropping = cost[cost['Cost Per Unit'] ==0].index
     cost.drop(index_dropping, inplace=True)
     return cost
 
@@ -154,8 +156,15 @@ def main_table(settlement_df):
     #Below 2 lines drops if 3 columns = 0, this ensures only relevant columns are shown
     index_dropping = settlement_analysis[(settlement_analysis['Amazon Revenue'] ==0) & (settlement_analysis['Advertising Spend'] ==0) & (settlement_analysis['Total Return'] ==0)].index
     settlement_analysis.drop(index_dropping, inplace=True)
+    settlement_analysis['Total Units'].fillna(0, inplace=True)
+    settlement_analysis = settlement_analysis.dropna(subset=['Total Return'])
+    settlement_analysis['Return Per Unit'] = settlement_analysis['Total Return'] /  settlement_analysis['Total Units']
     settlement_analysis = pd.concat([settlement_analysis, product_cost_df], axis=1)
-    return settlement_analysis.sort_values('Total Return', ascending=False)
+    #calculates total cost for all units sold, in the future add MFN units
+    settlement_analysis.fillna({'Packing Cost':0, 'Cost Per Unit':0, 'Product Cost': 0}, inplace=True)
+    settlement_analysis['Total Cost'] = settlement_analysis['Cost Per Unit'] * settlement_analysis['Total Units'] * -1
+    settlement_analysis['Total Profit'] = settlement_analysis['Total Cost'] + settlement_analysis['Total Return'] 
+    return settlement_analysis.sort_values('Total Profit', ascending=False)
     
 def export_report(finalized_report, nonsku_report, filename):
     '''Export to Excel with multiple Worksheets'''
