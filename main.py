@@ -80,7 +80,7 @@ def get_nonsales_revenue(settlement_df):
 def get_non_skus(settlement_df):
     '''Gets line items without a SKU  from the flat file. Such as Subscription, Monthly Storage, Reserve, Etc'''
     #perhaps look into doing inverse logic next time
-    nonskus= settlement_df.loc[(settlement_df['amount-description'] == 'Storage Fee') | (settlement_df['amount-description'] == 'Subscription Fee')|
+    nonskus= settlement_df.loc[(settlement_df['amount-description'] == 'Subscription Fee')|
     (settlement_df['amount-description'] == 'Previous Reserve Amount Balance') | (settlement_df['amount-description'] == 'Current Reserve Amount') |
     (settlement_df['amount-description'] == 'RemovalComplete') | (settlement_df['amount-description'] == 'Adjustment')|
     (settlement_df['amount-description'] == 'DisposalComplete') | (settlement_df['amount-description'] == 'FBACustomerReturnPerUnitFee') |
@@ -113,19 +113,40 @@ def get_storage_with_sku(monthly_storage_df, manage_fba_inventory_df):
     storage_by_sku = pd.concat((sku_fnsku, monthly_storage), axis=1)
     storage_by_sku = storage_by_sku[storage_by_sku['estimated_monthly_storage_fee'].notna()] #removes rows where nan in amount column
     storage_by_sku = storage_by_sku.rename(columns={'estimated_monthly_storage_fee':'Storage Fee'})
-    return storage_by_sku.groupby('sku').sum()
+    return (storage_by_sku.groupby('sku').sum() * -1)
+
+def get_asin_and_title(manage_fba_inventory_df):
+    '''Returns the ASIN and Title of the SKUS based on FBA Archive'''
+    asins_and_skus_df = manage_fba_inventory_df[['sku', 'asin', 'product-name']]
+    asins_and_skus_df = asins_and_skus_df.groupby('sku').sum()
+    asins_and_skus_df = asins_and_skus_df['product-name'].str[:40]
+    return asins_and_skus_df
+
+def get_advertising_spend(advertising_df):
+    '''Gets the spend of advertising by SKU'''
+    advertising_by_sku = advertising_df[['Advertised SKU', 'Spend']]
+    advertising_by_sku = advertising_by_sku.rename(columns={"Advertised SKU": 'sku', 'Spend': 'Advertising Spend'})
+    return advertising_by_sku.groupby('sku').sum() * -1
 
 def main_table(settlement_df):
     '''Returns a dataframe consisting of all columns'''
-    settlement_analysis = pd.concat([get_units_sold(settlement_df), get_nonsales_units(settlement_df)], axis=1)
+    settlement_analysis = pd.concat([asins_and_skus_df, get_units_sold(settlement_df), get_nonsales_units(settlement_df)], axis=1)
     settlement_analysis['Total Units'] = settlement_analysis['Units Sold'] + settlement_analysis['Non-Sale Units']
     settlement_analysis = pd.concat([settlement_analysis, get_salesbased_revenue(settlement_df), get_commission(settlement_df),get_fba_fees(settlement_df), get_nonsales_revenue(settlement_df)], axis=1)
-    settlement_analysis['Total Revenue'] = settlement_analysis['Sales Revenue'] + settlement_analysis['Commission'] + settlement_analysis['FBA Fees'] + settlement_analysis['Non-Sales Revenue'] 
+    settlement_analysis['Amazon Revenue'] = settlement_analysis['Sales Revenue'] + settlement_analysis['Commission'] + settlement_analysis['FBA Fees'] + settlement_analysis['Non-Sales Revenue'] 
+    settlement_analysis['Amazon Revenue'] = settlement_analysis['Amazon Revenue'].fillna(0)
     if monthly_storage_charged(settlement_df):
         settlement_analysis = pd.concat([settlement_analysis, storage_sku_df], axis=1)
-    #todo change 0 revenue items with a storage charge to 0 in all other columns
-    return settlement_analysis.sort_values('Total Revenue', ascending=False)
-
+        settlement_analysis['Storage Fee'] = settlement_analysis['Storage Fee'].fillna(0)
+    if adding_advertising:
+        settlement_analysis = pd.concat([settlement_analysis, advertising_spend], axis=1)
+        settlement_analysis['Advertising Spend'] = settlement_analysis['Advertising Spend'].fillna(0)
+    settlement_analysis['Total Return'] = settlement_analysis['Amazon Revenue'] + settlement_analysis['Storage Fee'] + settlement_analysis['Advertising Spend']
+    #Below drops if 3 columns = 0, this ensures only relevant columns are shown
+    index_dropping = settlement_analysis[(settlement_analysis['Amazon Revenue'] ==0) & (settlement_analysis['Advertising Spend'] ==0) & (settlement_analysis['Total Return'] ==0)].index
+    settlement_analysis.drop(index_dropping, inplace=True)
+    return settlement_analysis.sort_values('Total Return', ascending=False)
+    
 def export_report(finalized_report, nonsku_report, filename):
     '''Export to Excel with multiple Worksheets'''
     writer = pd.ExcelWriter(filename + ".xlsx", engine='xlsxwriter')
@@ -146,30 +167,54 @@ def get_statement_period(settlement_df):
     statement_period = [statement_start_date, statement_end_date]
     return statement_period
     
-settlement_df = pd.read_table(input("Statement File Name: "), sep='\t', dtype=dtypes)
+#settlement_df = pd.read_table(input("Statement File Name: "), sep='\t', dtype=dtypes)
+settlement_df = pd.read_table('flatfile.txt', sep='\t', dtype=dtypes)
 
 statement_timeframe =  get_statement_period(settlement_df)
 print("\nStatement period start time: " + statement_timeframe[0])
 print("Statement period end time: " + statement_timeframe[1])
 
-if monthly_storage_charged(settlement_df):
-    storage_report = input("\nMonthly Storage was charged in this statement. Please enter corresponding monthly storage report and Manage FBA Inventory archive report. \n\nMonthly Storage Report CSV name: ")
-    monthly_storage_df =  pd.read_csv(storage_report, encoding='latin1')
-    fba_inventory_report = input("Manage FBA Inventory Archive CSV report name: ")
-    manage_fba_inventory_df = pd.read_csv(fba_inventory_report, encoding = 'latin1')
-    storage_sku_df = get_storage_with_sku(monthly_storage_df, manage_fba_inventory_df)
-if input("\nWould you like to add advertising(y/n): ").lower() == 'y':
-    print("Please input filename for advertising xlsx report for the appropiate time range.")
-    advertising_report = input("Sponsored products XLSX report name: ")
-    advertising_df = pd.read_excel(advertising_report)
+#DEBUG uncomment the comments below to enable normal 
+fba_inventory_report = 'fba_archive.csv' #input("Manage FBA Inventory Archive CSV report name: ")
+manage_fba_inventory_df = pd.read_csv(fba_inventory_report, encoding = 'latin1')
 
-export_report(main_table(settlement_df), get_non_skus(settlement_df), input("\nOutput filename?: "))
+asins_and_skus_df = get_asin_and_title(manage_fba_inventory_df)
+
+if monthly_storage_charged(settlement_df):
+    storage_report = 'november_storage.csv' #input("\nMonthly Storage was charged in this statement. Please enter corresponding monthly storage report.\n\nMonthly Storage Report CSV name: ")
+    monthly_storage_df =  pd.read_csv(storage_report, encoding='latin1')
+    storage_sku_df = get_storage_with_sku(monthly_storage_df, manage_fba_inventory_df)
+
+adding_advertising = input("\nWould you like to add advertising(y/n): ").lower() == 'y'
+if adding_advertising:
+    #print("Please input filename for advertising xlsx report for the appropiate time range.")
+    advertising_report = 'advertising_report.xlsx' #input("Sponsored products XLSX report name: ")
+    advertising_df = pd.read_excel(advertising_report)
+    advertising_spend = get_advertising_spend(advertising_df)
+
+export_report(main_table(settlement_df), get_non_skus(settlement_df), 'debugoutput') #input("\nOutput filename?: "))
+
+#figure out how to calculate units for MFN (principle)
+#probably make it's own column for mfn
+
+#revenue 
+#revenue per unit
+#net cost per unit
+# advert spend total 	 advert per sale 	 net cost w/ advert 	 profit w/advert 	 total profit /advert 	roi w/ advert
+
+
 
 #TODO
 #Add in status text
 #get rows where SKU is non existant (only showing as FNSKU) and put it in a seperate tab of report
-#figure out how to calculate units for MFN
+
 #make all storage fees negative
+#tab for just sales
+#other tab for nonsales
+#confirm sales against amazon fee preview
+#
+
+
 
 #Personal Notes
 #this report is just for a general idea of unit movement and should not be used for inventory management just yet
