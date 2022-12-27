@@ -203,7 +203,7 @@ if adding_advertising:
     advertising_df = pd.read_excel(advertising_report)
     advertising_spend = get_advertising_spend(advertising_df)
 
-helium10 = 'h10-cogs.csv' #input("Helium 10 Cogs File (CSV)")
+helium10 = 'h10-cogs.csv' #input("Helium 10 Cogs File (CSV) ")
 helium10_df = pd.read_csv(helium10)
 product_cost_df = get_cost(helium10_df)
 
