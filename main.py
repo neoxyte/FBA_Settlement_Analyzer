@@ -128,6 +128,15 @@ def get_advertising_spend(advertising_df):
     advertising_by_sku = advertising_by_sku.rename(columns={"Advertised SKU": 'sku', 'Spend': 'Advertising Spend'})
     return advertising_by_sku.groupby('sku').sum() * -1
 
+def get_cost(helium10_df):
+    cost = helium10_df[['SKU','PRODUCT COST', 'SHIPPING COST']]
+    cost = cost.rename(columns={"SKU": 'sku', 'PRODUCT COST': 'Product Cost', 'SHIPPING COST': 'Packing Cost'})
+    cost['Total Cost'] = cost['Product Cost']  + cost['Packing Cost']
+    index_dropping = cost[cost['Total Cost'] ==0].index
+    cost.groupby('sku').sum()
+    cost.drop(index_dropping, inplace=True)
+    return cost
+
 def main_table(settlement_df):
     '''Returns a dataframe consisting of all columns'''
     settlement_analysis = pd.concat([asins_and_skus_df, get_units_sold(settlement_df), get_nonsales_units(settlement_df)], axis=1)
@@ -142,9 +151,10 @@ def main_table(settlement_df):
         settlement_analysis = pd.concat([settlement_analysis, advertising_spend], axis=1)
         settlement_analysis['Advertising Spend'] = settlement_analysis['Advertising Spend'].fillna(0)
     settlement_analysis['Total Return'] = settlement_analysis['Amazon Revenue'] + settlement_analysis['Storage Fee'] + settlement_analysis['Advertising Spend']
-    #Below drops if 3 columns = 0, this ensures only relevant columns are shown
+    #Below 2 lines drops if 3 columns = 0, this ensures only relevant columns are shown
     index_dropping = settlement_analysis[(settlement_analysis['Amazon Revenue'] ==0) & (settlement_analysis['Advertising Spend'] ==0) & (settlement_analysis['Total Return'] ==0)].index
     settlement_analysis.drop(index_dropping, inplace=True)
+    settlement_analysis = pd.concat([settlement_analysis, product_cost_df], axis=1)
     return settlement_analysis.sort_values('Total Return', ascending=False)
     
 def export_report(finalized_report, nonsku_report, filename):
@@ -166,7 +176,9 @@ def get_statement_period(settlement_df):
     statement_end_date = dates.iloc[0][1]
     statement_period = [statement_start_date, statement_end_date]
     return statement_period
-    
+
+
+#DEBUG uncomment the comments below to enable normal 
 #settlement_df = pd.read_table(input("Statement File Name: "), sep='\t', dtype=dtypes)
 settlement_df = pd.read_table('flatfile.txt', sep='\t', dtype=dtypes)
 
@@ -174,7 +186,6 @@ statement_timeframe =  get_statement_period(settlement_df)
 print("\nStatement period start time: " + statement_timeframe[0])
 print("Statement period end time: " + statement_timeframe[1])
 
-#DEBUG uncomment the comments below to enable normal 
 fba_inventory_report = 'fba_archive.csv' #input("Manage FBA Inventory Archive CSV report name: ")
 manage_fba_inventory_df = pd.read_csv(fba_inventory_report, encoding = 'latin1')
 
@@ -191,6 +202,10 @@ if adding_advertising:
     advertising_report = 'advertising_report.xlsx' #input("Sponsored products XLSX report name: ")
     advertising_df = pd.read_excel(advertising_report)
     advertising_spend = get_advertising_spend(advertising_df)
+
+helium10 = 'h10-cogs.csv' #input("Helium 10 Cogs File (CSV)")
+helium10_df = pd.read_csv(helium10)
+product_cost_df = get_cost(helium10_df)
 
 export_report(main_table(settlement_df), get_non_skus(settlement_df), 'debugoutput') #input("\nOutput filename?: "))
 
