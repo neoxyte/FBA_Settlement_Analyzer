@@ -1,12 +1,9 @@
 import pandas as pd
 import xlsxwriter
+
+#ignores runtime warnings
 import warnings
 warnings.filterwarnings("ignore")
-
-#This stops data truncation
-pd.set_option('display.max_columns', None)
-pd.set_option('display.width', None)
-pd.set_option("display.max_colwidth", None)
 
 #data types for settlement flat file v2
 dtypes = {
