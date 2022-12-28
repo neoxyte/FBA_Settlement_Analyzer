@@ -6,6 +6,9 @@ import numpy as np
 import warnings
 warnings.filterwarnings("ignore")
 
+#debug mode 
+debug = True
+
 #data types for settlement flat file v2
 dtypes = {
     "settlement-id": "category",
@@ -107,7 +110,6 @@ def get_storage(settlement_df):
 
 def monthly_storage_charged(settlement_df):
     '''Returns True/False if monthly storaged was charged'''
-    #confirm if this works with a previous report that doesn't have storage
     return get_storage(settlement_df) != 0
 
 def get_storage_with_sku(monthly_storage_df, manage_fba_inventory_df):
@@ -156,20 +158,29 @@ def main_table(settlement_df):
     if adding_advertising:
         settlement_analysis = pd.concat([settlement_analysis, advertising_spend], axis=1)
         settlement_analysis['Advertising Spend'] = settlement_analysis['Advertising Spend'].fillna(0)
-        settlement_analysis['Total Return'] = settlement_analysis['Amazon Revenue'] + settlement_analysis['Storage Fee'] + settlement_analysis['Advertising Spend']
+        if monthly_storage_charged(settlement_df):
+            settlement_analysis['Total Return'] = settlement_analysis['Amazon Revenue'] + settlement_analysis['Storage Fee'] + settlement_analysis['Advertising Spend']
+        else:
+            settlement_analysis['Total Return'] = settlement_analysis['Amazon Revenue'] + settlement_analysis['Advertising Spend']
         index_dropping = settlement_analysis[(settlement_analysis['Amazon Revenue'] ==0) & (settlement_analysis['Advertising Spend'] ==0) & (settlement_analysis['Total Return'] ==0)].index
         settlement_analysis.drop(index_dropping, inplace=True)
     else:
         settlement_analysis['Total Return'] = settlement_analysis['Amazon Revenue'] + settlement_analysis['Storage Fee'] 
     settlement_analysis['Total Units'].fillna(0, inplace=True)
     settlement_analysis['Return Per Unit'] = settlement_analysis['Total Return'] /  settlement_analysis['Total Units']
-    settlement_analysis = pd.concat([settlement_analysis, product_cost_df], axis=1)
-    settlement_analysis.fillna({'Packing Cost':0, 'Cost Per Unit':0, 'Product Cost': 0}, inplace=True)
-    settlement_analysis['Total Cost'] = settlement_analysis['Cost Per Unit'] * settlement_analysis['Total Units'] * -1
-    settlement_analysis['Total Profit'] = settlement_analysis['Total Cost'] + settlement_analysis['Total Return'] 
-    settlement_analysis.replace([np.inf, -np.inf], np.nan, inplace=True)
-    settlement_analysis = settlement_analysis.dropna(subset=['Total Return'])
-    return settlement_analysis.sort_values('Total Profit', ascending=False)
+    if adding_cost:
+        settlement_analysis = pd.concat([settlement_analysis, product_cost_df], axis=1)
+        settlement_analysis.fillna({'Packing Cost':0, 'Cost Per Unit':0, 'Product Cost': 0}, inplace=True)
+        settlement_analysis['Total Cost'] = settlement_analysis['Cost Per Unit'] * settlement_analysis['Total Units'] * -1
+        settlement_analysis['Total Profit'] = settlement_analysis['Total Cost'] + settlement_analysis['Total Return'] 
+        settlement_analysis.replace([np.inf, -np.inf], np.nan, inplace=True) 
+        settlement_analysis = settlement_analysis.dropna(subset=['Total Return'])
+        settlement_analysis = settlement_analysis.sort_values('Total Profit', ascending=False)
+    else:
+        settlement_analysis.replace([np.inf, -np.inf], np.nan, inplace=True) 
+        settlement_analysis = settlement_analysis.dropna(subset=['Total Return'])
+        settlement_analysis = settlement_analysis.sort_values('Total Return', ascending=False)
+    return  settlement_analysis
     
 def export_report(finalized_report, nonsku_report, filename):
     '''Export to Excel with multiple Worksheets'''
@@ -192,41 +203,65 @@ def get_statement_period(settlement_df):
     return statement_period
 
 
-settlement_df = pd.read_table(input("Statement File Name: "), sep='\t', dtype=dtypes)
-
-statement_timeframe =  get_statement_period(settlement_df)
-print("\nStatement period start time: " + statement_timeframe[0])
-print("Statement period end time: " + statement_timeframe[1])
-
-fba_inventory_report = input("Manage FBA Inventory Archive CSV report name: ")
-manage_fba_inventory_df = pd.read_csv(fba_inventory_report, encoding = 'latin1')
-asins_and_skus_df = get_asin_and_title(manage_fba_inventory_df)
-
-if monthly_storage_charged(settlement_df):
-    storage_report = input("\nMonthly Storage was charged in this statement. Please enter corresponding monthly storage report.\n\nMonthly Storage Report CSV name: ")
-    monthly_storage_df =  pd.read_csv(storage_report, encoding='latin1')
-    storage_sku_df = get_storage_with_sku(monthly_storage_df, manage_fba_inventory_df)
-
-adding_advertising = input("\nWould you like to add advertising(y/n): ").lower() == 'y'
-if adding_advertising:
-    print("Please input filename for advertising xlsx report for the appropiate time range.")
-    advertising_report = input("Sponsored products XLSX report name: ")
-    advertising_df = pd.read_excel(advertising_report)
-    advertising_spend = get_advertising_spend(advertising_df)
-
-helium10 = input("Helium 10 Cogs File (CSV): ")
-helium10_df = pd.read_csv(helium10)
-product_cost_df = get_cost(helium10_df)
-
-export_report(main_table(settlement_df), get_non_skus(settlement_df), input("\nOutput filename?: "))
-
-
+if debug == False:
+    flat_file = input("Statement File Name: ")
+    settlement_df = pd.read_table(flat_file, sep='\t', dtype=dtypes)
+    statement_timeframe =  get_statement_period(settlement_df)
+    print("\nStatement period start time: " + statement_timeframe[0])
+    print("Statement period end time: " + statement_timeframe[1])
+    fba_inventory_report = input("Manage FBA Inventory Archive CSV report name: ")
+    manage_fba_inventory_df = pd.read_csv(fba_inventory_report, encoding = 'latin1')
+    asins_and_skus_df = get_asin_and_title(manage_fba_inventory_df)
+    if monthly_storage_charged(settlement_df):
+        storage_report = input("\nMonthly Storage was charged in this statement. Please enter corresponding monthly storage report.\n\nMonthly Storage Report CSV name: ")
+        monthly_storage_df =  pd.read_csv(storage_report, encoding='latin1')
+        storage_sku_df = get_storage_with_sku(monthly_storage_df, manage_fba_inventory_df)
+    adding_advertising = input("\nWould you like to add advertising(y/n): ").lower() == 'y'
+    if adding_advertising:
+        print("Please input filename for advertising xlsx report for the appropiate time range.")
+        advertising_report = input("Sponsored products XLSX report name: ")
+        advertising_df = pd.read_excel(advertising_report)
+        advertising_spend = get_advertising_spend(advertising_df)
+    adding_cost = input("\nWould you like to add Cost(y/n): ").lower() == 'y'
+    if adding_cost:
+        helium10 = input("Helium 10 Cogs File (CSV): ")
+        helium10_df = pd.read_csv(helium10)
+        product_cost_df = get_cost(helium10_df)
+    #exporting would need an advertising tab, optional argument depending if adveritsing is broken down or not
+    export_report(main_table(settlement_df), get_non_skus(settlement_df), input("\nOutput filename?: "))
+elif debug == True:
+    flat_file = 'flatfile.txt'
+    settlement_df = pd.read_table(flat_file, sep='\t', dtype=dtypes)
+    statement_timeframe =  get_statement_period(settlement_df)
+    print("\nStatement period start time: " + statement_timeframe[0])
+    print("Statement period end time: " + statement_timeframe[1])
+    fba_inventory_report = 'archive.csv'
+    manage_fba_inventory_df = pd.read_csv(fba_inventory_report, encoding = 'latin1')
+    asins_and_skus_df = get_asin_and_title(manage_fba_inventory_df)
+    if monthly_storage_charged(settlement_df):
+        storage_report = 'storage.csv'
+        monthly_storage_df =  pd.read_csv(storage_report, encoding='latin1')
+        storage_sku_df = get_storage_with_sku(monthly_storage_df, manage_fba_inventory_df)
+    adding_advertising = input("\nWould you like to add advertising(y/n): ").lower() == 'y'
+    if adding_advertising:
+        print("Please input filename for advertising xlsx report for the appropiate time range.")
+        advertising_report = 'adreport.xlsx'
+        advertising_df = pd.read_excel(advertising_report)
+        advertising_spend = get_advertising_spend(advertising_df)
+    adding_cost = input("\nWould you like to add Cost(y/n): ").lower() == 'y'
+    if adding_cost:
+        helium10 = 'h10_cogs.csv'
+        helium10_df = pd.read_csv(helium10)
+        product_cost_df = get_cost(helium10_df)
+    #exporting would need an advertising tab, optional argument depending if adveritsing is broken down or not
+    export_report(main_table(settlement_df), get_non_skus(settlement_df), input("\nOutput filename?: "))
 
 #TODO
 #check yonahs template
-#debug mode on
-#Advertising Tab
-#let the program ask if you want cost or not
+#formatting for money values (2-3 decimals)
+#ROI (only if cost is involved)
+#Advertising Tab 
+#if adding advertising, add a breakdown 
 #confirm sales against amazon fee preview
 
 
