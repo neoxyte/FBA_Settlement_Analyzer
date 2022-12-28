@@ -219,8 +219,12 @@ helium10_df = pd.read_csv(helium10)
 product_cost_df = get_cost(helium10_df)
 
 export_report(main_table(settlement_df), get_non_skus(settlement_df), input("\nOutput filename?: "))
+
+
+
 #TODO
 #check yonahs template
+#debug mode on
 #Advertising Tab
 #let the program ask if you want cost or not
 #confirm sales against amazon fee preview
