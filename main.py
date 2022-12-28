@@ -181,7 +181,30 @@ def main_table(settlement_df):
         settlement_analysis = settlement_analysis.dropna(subset=['Total Return'])
         settlement_analysis = settlement_analysis.sort_values('Total Return', ascending=False)
     return  settlement_analysis
-    
+
+def get_non_skus(settlement_df):
+    '''Gets line items without a SKU  from the flat file. Such as Subscription, Monthly Storage, Reserve, Etc'''
+    nonskus= settlement_df.loc[(settlement_df['amount-description'] == 'Subscription Fee')|
+    (settlement_df['amount-description'] == 'Previous Reserve Amount Balance') | (settlement_df['amount-description'] == 'Current Reserve Amount') |
+    (settlement_df['amount-description'] == 'RemovalComplete') | (settlement_df['amount-description'] == 'Adjustment')|
+    (settlement_df['amount-description'] == 'DisposalComplete') | (settlement_df['amount-description'] == 'FBACustomerReturnPerUnitFee') |
+    (settlement_df['amount-description'] == 'Shipping label purchase') | (settlement_df['amount-description'] == 'Shipping label purchase for return') |
+    (settlement_df['amount-description'] == 'INCORRECT_FEES_NON_ITEMIZED') | (settlement_df['amount-description'] == 'FBAInboundTransportationFee')|
+    (settlement_df['amount-description'] == 'FBA Pick & Pack Fee') ]
+    nonskus = nonskus[['amount-description', 'amount']]
+    nonskus = nonskus.groupby('amount-description').sum()
+    nonskus = nonskus.loc[~(nonskus==0).all(axis=1)]
+    return nonskus
+
+def advertising_table(main_df, ):
+    '''Returns a dataframe consisting of the advertising breakdown. using the main dataframe from main_table function and the advertising df'''
+    '''
+    Possible ideas:
+        take the main table then adjust it
+
+    '''
+    return "Advertising Table"
+
 def export_report(finalized_report, nonsku_report, filename):
     '''Export to Excel with multiple Worksheets'''
     writer = pd.ExcelWriter(filename + ".xlsx", engine='xlsxwriter')
@@ -189,7 +212,7 @@ def export_report(finalized_report, nonsku_report, filename):
     nonsku_report.to_excel(writer, sheet_name='Non SKU line items')
     for column in finalized_report:
         column_length = max(finalized_report[column].astype(str).map(len).max(), len(column))
-        col_idx = finalized_report.columns.get_loc(column)
+        col_iddx = finalized_report.columns.get_loc(column)
         writer.sheets['Overview'].set_column(col_idx, col_idx, column_length)
     writer.close()
     print("Exported to Excel as " + filename)
@@ -201,7 +224,6 @@ def get_statement_period(settlement_df):
     statement_end_date = dates.iloc[0][1]
     statement_period = [statement_start_date, statement_end_date]
     return statement_period
-
 
 if debug == False:
     flat_file = input("Statement File Name: ")
