@@ -86,7 +86,6 @@ def get_nonsales_revenue(settlement_df):
 
 def get_non_skus(settlement_df):
     '''Gets line items without a SKU  from the flat file. Such as Subscription, Monthly Storage, Reserve, Etc'''
-    #perhaps look into doing inverse logic next time
     nonskus= settlement_df.loc[(settlement_df['amount-description'] == 'Subscription Fee')|
     (settlement_df['amount-description'] == 'Previous Reserve Amount Balance') | (settlement_df['amount-description'] == 'Current Reserve Amount') |
     (settlement_df['amount-description'] == 'RemovalComplete') | (settlement_df['amount-description'] == 'Adjustment')|
@@ -126,7 +125,7 @@ def get_asin_and_title(manage_fba_inventory_df):
     '''Returns the ASIN and Title of the SKUS based on FBA Archive'''
     asins_and_skus_df = manage_fba_inventory_df[['sku', 'asin', 'product-name']]
     asins_and_skus_df = asins_and_skus_df.groupby('sku').sum()
-    asins_and_skus_df = asins_and_skus_df['product-name'].str[:40]
+    asins_and_skus_df['product-name'] = asins_and_skus_df['product-name'].str[:40]
     return asins_and_skus_df
 
 def get_advertising_spend(advertising_df):
@@ -157,14 +156,14 @@ def main_table(settlement_df):
     if adding_advertising:
         settlement_analysis = pd.concat([settlement_analysis, advertising_spend], axis=1)
         settlement_analysis['Advertising Spend'] = settlement_analysis['Advertising Spend'].fillna(0)
-    settlement_analysis['Total Return'] = settlement_analysis['Amazon Revenue'] + settlement_analysis['Storage Fee'] + settlement_analysis['Advertising Spend']
-    #Below 2 lines drops if 3 columns = 0, this ensures only relevant columns are shown
-    index_dropping = settlement_analysis[(settlement_analysis['Amazon Revenue'] ==0) & (settlement_analysis['Advertising Spend'] ==0) & (settlement_analysis['Total Return'] ==0)].index
-    settlement_analysis.drop(index_dropping, inplace=True)
+        settlement_analysis['Total Return'] = settlement_analysis['Amazon Revenue'] + settlement_analysis['Storage Fee'] + settlement_analysis['Advertising Spend']
+        index_dropping = settlement_analysis[(settlement_analysis['Amazon Revenue'] ==0) & (settlement_analysis['Advertising Spend'] ==0) & (settlement_analysis['Total Return'] ==0)].index
+        settlement_analysis.drop(index_dropping, inplace=True)
+    else:
+        settlement_analysis['Total Return'] = settlement_analysis['Amazon Revenue'] + settlement_analysis['Storage Fee'] 
     settlement_analysis['Total Units'].fillna(0, inplace=True)
     settlement_analysis['Return Per Unit'] = settlement_analysis['Total Return'] /  settlement_analysis['Total Units']
     settlement_analysis = pd.concat([settlement_analysis, product_cost_df], axis=1)
-    #calculates total cost for all units sold, in the future add MFN units
     settlement_analysis.fillna({'Packing Cost':0, 'Cost Per Unit':0, 'Product Cost': 0}, inplace=True)
     settlement_analysis['Total Cost'] = settlement_analysis['Cost Per Unit'] * settlement_analysis['Total Units'] * -1
     settlement_analysis['Total Profit'] = settlement_analysis['Total Cost'] + settlement_analysis['Total Return'] 
@@ -193,56 +192,38 @@ def get_statement_period(settlement_df):
     return statement_period
 
 
-#DEBUG uncomment the comments below to enable normal 
-#settlement_df = pd.read_table(input("Statement File Name: "), sep='\t', dtype=dtypes)
-settlement_df = pd.read_table('flatfile.txt', sep='\t', dtype=dtypes)
+settlement_df = pd.read_table(input("Statement File Name: "), sep='\t', dtype=dtypes)
 
 statement_timeframe =  get_statement_period(settlement_df)
 print("\nStatement period start time: " + statement_timeframe[0])
 print("Statement period end time: " + statement_timeframe[1])
 
-fba_inventory_report = 'fba_archive.csv' #input("Manage FBA Inventory Archive CSV report name: ")
+fba_inventory_report = input("Manage FBA Inventory Archive CSV report name: ")
 manage_fba_inventory_df = pd.read_csv(fba_inventory_report, encoding = 'latin1')
-
 asins_and_skus_df = get_asin_and_title(manage_fba_inventory_df)
 
 if monthly_storage_charged(settlement_df):
-    storage_report = 'november_storage.csv' #input("\nMonthly Storage was charged in this statement. Please enter corresponding monthly storage report.\n\nMonthly Storage Report CSV name: ")
+    storage_report = input("\nMonthly Storage was charged in this statement. Please enter corresponding monthly storage report.\n\nMonthly Storage Report CSV name: ")
     monthly_storage_df =  pd.read_csv(storage_report, encoding='latin1')
     storage_sku_df = get_storage_with_sku(monthly_storage_df, manage_fba_inventory_df)
 
 adding_advertising = input("\nWould you like to add advertising(y/n): ").lower() == 'y'
 if adding_advertising:
-    #print("Please input filename for advertising xlsx report for the appropiate time range.")
-    advertising_report = 'advertising_report.xlsx' #input("Sponsored products XLSX report name: ")
+    print("Please input filename for advertising xlsx report for the appropiate time range.")
+    advertising_report = input("Sponsored products XLSX report name: ")
     advertising_df = pd.read_excel(advertising_report)
     advertising_spend = get_advertising_spend(advertising_df)
 
-helium10 = 'h10-cogs.csv' #input("Helium 10 Cogs File (CSV) ")
+helium10 = input("Helium 10 Cogs File (CSV): ")
 helium10_df = pd.read_csv(helium10)
 product_cost_df = get_cost(helium10_df)
 
-export_report(main_table(settlement_df), get_non_skus(settlement_df), 'debugoutput') #input("\nOutput filename?: "))
-
-#figure out how to calculate units for MFN (principle)
-#probably make it's own column for mfn
-
-#revenue 
-#revenue per unit
-#net cost per unit
-# advert spend total 	 advert per sale 	 net cost w/ advert 	 profit w/advert 	 total profit /advert 	roi w/ advert
-
-
-
+export_report(main_table(settlement_df), get_non_skus(settlement_df), input("\nOutput filename?: "))
 #TODO
-#Add in status text
-#get rows where SKU is non existant (only showing as FNSKU) and put it in a seperate tab of report
-
-#make all storage fees negative
-#tab for just sales
-#other tab for nonsales
+#check yonahs template
+#Advertising Tab
+#let the program ask if you want cost or not
 #confirm sales against amazon fee preview
-#
 
 
 
