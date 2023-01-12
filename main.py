@@ -7,7 +7,7 @@ import warnings
 warnings.filterwarnings("ignore")
 
 #debug mode 
-debug = True
+debug = False
 
 #data types for settlement flat file v2
 dtypes = {
@@ -119,7 +119,7 @@ def get_storage_with_sku(monthly_storage_df, manage_fba_inventory_df):
     monthly_storage = monthly_storage_df[['fnsku', 'estimated_monthly_storage_fee']]
     monthly_storage = monthly_storage.groupby('fnsku').sum()
     storage_by_sku = pd.concat((sku_fnsku, monthly_storage), axis=1)
-    storage_by_sku = storage_by_sku[storage_by_sku['estimated_monthly_storage_fee'].notna()] #removes rows where nan in amount column
+    storage_by_sku = storage_by_sku[storage_by_sku['estimated_monthly_storage_fee'].notna()]
     storage_by_sku = storage_by_sku.rename(columns={'estimated_monthly_storage_fee':'Storage Fee'})
     return (storage_by_sku.groupby('sku').sum() * -1)
 
@@ -165,7 +165,10 @@ def main_table(settlement_df):
         index_dropping = settlement_analysis[(settlement_analysis['Amazon Revenue'] ==0) & (settlement_analysis['Advertising Spend'] ==0) & (settlement_analysis['Total Return'] ==0)].index
         settlement_analysis.drop(index_dropping, inplace=True)
     else:
-        settlement_analysis['Total Return'] = settlement_analysis['Amazon Revenue'] + settlement_analysis['Storage Fee'] 
+        if monthly_storage_charged(settlement_df):
+            settlement_analysis['Total Return'] = settlement_analysis['Amazon Revenue'] + settlement_analysis['Storage Fee'] 
+        else:
+            settlement_analysis['Total Return'] = settlement_analysis['Amazon Revenue']
     settlement_analysis['Total Units'].fillna(0, inplace=True)
     settlement_analysis['Return Per Unit'] = settlement_analysis['Total Return'] /  settlement_analysis['Total Units']
     if adding_cost:
@@ -196,26 +199,37 @@ def get_non_skus(settlement_df):
     nonskus = nonskus.loc[~(nonskus==0).all(axis=1)]
     return nonskus
 
-def advertising_table(main_df, ):
+def get_overview(settlement_df):
+    '''Returns a dataframe with totals for everything'''
+    disbursement_total = settlement_df['amount'].sum()
+    main_df = main_table(settlement_df)
+    non_sku_df = get_non_skus(settlement_df)
+    amazon_revenue = main_df['Amazon Revenue'].sum()
+    overview ={
+        #'Disbursement Total': disbursement_total,
+        'Amazon Revenue': amazon_revenue
+    }
+    if monthly_storage_charged(settlement_df):
+        storage_fee = storage_sku_df.sum()[0]
+        overview['Storage Fee'] = storage_fee
+    if adding_advertising:
+        advertising_total = advertising_spend.sum()[0]
+        overview['Advertising Total'] = advertising_total
+    #if adding_cost:
+    #    cost_total = product_cost_df['Cost Per Unit'].sum() 
+    #    overview['Product Cost Total'] = cost_total
+    overview = pd.DataFrame.from_dict(overview,orient='index', columns=['amount'])
+    overview = pd.concat([overview, non_sku_df])
+    return overview
+
+def advertising_table(main_df):
     '''Returns a dataframe consisting of the advertising breakdown. using the main dataframe from main_table function and the advertising df'''
     '''
     Possible ideas:
         take the main table then adjust it
-
     '''
-    return "Advertising Table"
-
-def export_report(finalized_report, nonsku_report, filename):
-    '''Export to Excel with multiple Worksheets'''
-    writer = pd.ExcelWriter(filename + ".xlsx", engine='xlsxwriter')
-    finalized_report.to_excel(writer, sheet_name='Overview')
-    nonsku_report.to_excel(writer, sheet_name='Non SKU line items')
-    for column in finalized_report:
-        column_length = max(finalized_report[column].astype(str).map(len).max(), len(column))
-        col_iddx = finalized_report.columns.get_loc(column)
-        writer.sheets['Overview'].set_column(col_idx, col_idx, column_length)
-    writer.close()
-    print("Exported to Excel as " + filename)
+    ad_df = main_df
+    return main_df
 
 def get_statement_period(settlement_df):
     '''Returns a list with start and end date'''
@@ -225,12 +239,25 @@ def get_statement_period(settlement_df):
     statement_period = [statement_start_date, statement_end_date]
     return statement_period
 
+def export_report(filename):
+    '''Export to Excel with multiple Worksheets'''
+    writer = pd.ExcelWriter(filename + ".xlsx", engine='xlsxwriter')
+    finalized_report.to_excel(writer, sheet_name='Sales')
+    overview_tab.to_excel(writer, sheet_name='Overview')
+    for column in finalized_report:
+        column_length = max(finalized_report[column].astype(str).map(len).max(), len(column))
+        col_idx = finalized_report.columns.get_loc(column)
+        writer.sheets['Overview'].set_column(col_idx, col_idx, column_length)
+    writer.close()
+    print("Exported to Excel as " + filename)
+
 if debug == False:
     flat_file = input("Statement File Name: ")
     settlement_df = pd.read_table(flat_file, sep='\t', dtype=dtypes)
     statement_timeframe =  get_statement_period(settlement_df)
     print("\nStatement period start time: " + statement_timeframe[0])
     print("Statement period end time: " + statement_timeframe[1])
+    #statement date should be in excel
     fba_inventory_report = input("Manage FBA Inventory Archive CSV report name: ")
     manage_fba_inventory_df = pd.read_csv(fba_inventory_report, encoding = 'latin1')
     asins_and_skus_df = get_asin_and_title(manage_fba_inventory_df)
@@ -249,8 +276,6 @@ if debug == False:
         helium10 = input("Helium 10 Cogs File (CSV): ")
         helium10_df = pd.read_csv(helium10)
         product_cost_df = get_cost(helium10_df)
-    #exporting would need an advertising tab, optional argument depending if adveritsing is broken down or not
-    export_report(main_table(settlement_df), get_non_skus(settlement_df), input("\nOutput filename?: "))
 elif debug == True:
     flat_file = 'flatfile.txt'
     settlement_df = pd.read_table(flat_file, sep='\t', dtype=dtypes)
@@ -275,23 +300,8 @@ elif debug == True:
         helium10 = 'h10_cogs.csv'
         helium10_df = pd.read_csv(helium10)
         product_cost_df = get_cost(helium10_df)
-    #exporting would need an advertising tab, optional argument depending if adveritsing is broken down or not
-    export_report(main_table(settlement_df), get_non_skus(settlement_df), input("\nOutput filename?: "))
 
-#TODO
-#check yonahs template
-#formatting for money values (2-3 decimals)
-#ROI (only if cost is involved)
-#Advertising Tab 
-#if adding advertising, add a breakdown 
-#confirm sales against amazon fee preview
+finalized_report = main_table(settlement_df)
+overview_tab = get_overview(settlement_df)
 
-
-
-#Personal Notes
-#this report is just for a general idea of unit movement and should not be used for inventory management just yet
-#we can compare inventory reports against settlement reports in the future
-#compensated clawback no units potentially involved, look into in future
-# "FBA Pick and Pack Fee" return reimbursement does not have SKUS accounted for in report. So have to add that somehow, for now ill add it as a nonsku item
-#add something that checks if taxes cancel out properly
-
+export_report(input("\nOutput filename?: "))
