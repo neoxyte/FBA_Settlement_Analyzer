@@ -167,3 +167,4 @@ flatfile.txt
 statement.txt
 statement.txt
 nostorage_flatfile.txt
+*.txt
