@@ -340,4 +340,12 @@ if adding_cost:
 finalized_report = main_table(settlement_df)
 overview_tab = get_overview(settlement_df)
 
-export_report(input("\nOutput filename?: "))
+output_form= sg.FlexForm('Settlement Analyzer')
+layout = [
+        [sg.Text('Please type a file name')],
+        [sg.Input()],
+        [sg.Submit(), sg.Cancel()]
+        ]
+button, output_name =  output_form.Layout(layout).Read() 
+output_form.close()
+export_report(output_name[0])
