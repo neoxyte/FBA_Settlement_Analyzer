@@ -1,6 +1,8 @@
 import pandas as pd
 import xlsxwriter
 import numpy as np
+import PySimpleGUI as sg
+
 
 #ignores runtime warnings
 import warnings
@@ -251,55 +253,45 @@ def export_report(filename):
     writer.close()
     print("Exported to Excel as " + filename)
 
-if debug == False:
-    flat_file = input("Statement File Name: ")
-    settlement_df = pd.read_table(flat_file, sep='\t', dtype=dtypes)
-    statement_timeframe =  get_statement_period(settlement_df)
-    print("\nStatement period start time: " + statement_timeframe[0])
-    print("Statement period end time: " + statement_timeframe[1])
-    #statement date should be in excel
-    fba_inventory_report = input("Manage FBA Inventory Archive CSV report name: ")
-    manage_fba_inventory_df = pd.read_csv(fba_inventory_report, encoding = 'latin1')
-    asins_and_skus_df = get_asin_and_title(manage_fba_inventory_df)
-    if monthly_storage_charged(settlement_df):
-        storage_report = input("\nMonthly Storage was charged in this statement. Please enter corresponding monthly storage report.\n\nMonthly Storage Report CSV name: ")
-        monthly_storage_df =  pd.read_csv(storage_report, encoding='latin1')
-        storage_sku_df = get_storage_with_sku(monthly_storage_df, manage_fba_inventory_df)
-    adding_advertising = input("\nWould you like to add advertising(y/n): ").lower() == 'y'
-    if adding_advertising:
-        print("Please input filename for advertising xlsx report for the appropiate time range.")
-        advertising_report = input("Sponsored products XLSX report name: ")
-        advertising_df = pd.read_excel(advertising_report)
-        advertising_spend = get_advertising_spend(advertising_df)
-    adding_cost = input("\nWould you like to add Cost(y/n): ").lower() == 'y'
-    if adding_cost:
-        helium10 = input("Helium 10 Cogs File (CSV): ")
-        helium10_df = pd.read_csv(helium10)
-        product_cost_df = get_cost(helium10_df)
-elif debug == True:
-    flat_file = 'flatfile.txt'
-    settlement_df = pd.read_table(flat_file, sep='\t', dtype=dtypes)
-    statement_timeframe =  get_statement_period(settlement_df)
-    print("\nStatement period start time: " + statement_timeframe[0])
-    print("Statement period end time: " + statement_timeframe[1])
-    fba_inventory_report = 'archive.csv'
-    manage_fba_inventory_df = pd.read_csv(fba_inventory_report, encoding = 'latin1')
-    asins_and_skus_df = get_asin_and_title(manage_fba_inventory_df)
-    if monthly_storage_charged(settlement_df):
-        storage_report = 'storage.csv'
-        monthly_storage_df =  pd.read_csv(storage_report, encoding='latin1')
-        storage_sku_df = get_storage_with_sku(monthly_storage_df, manage_fba_inventory_df)
-    adding_advertising = input("\nWould you like to add advertising(y/n): ").lower() == 'y'
-    if adding_advertising:
-        print("Please input filename for advertising xlsx report for the appropiate time range.")
-        advertising_report = 'adreport.xlsx'
-        advertising_df = pd.read_excel(advertising_report)
-        advertising_spend = get_advertising_spend(advertising_df)
-    adding_cost = input("\nWould you like to add Cost(y/n): ").lower() == 'y'
-    if adding_cost:
-        helium10 = 'h10_cogs.csv'
-        helium10_df = pd.read_csv(helium10)
-        product_cost_df = get_cost(helium10_df)
+
+
+flatfile_form = sg.FlexForm('Settlement Analyzer')  # begin with a blank form
+layout = [
+          [sg.Text('Please select Flat File')],
+          [sg.Text('Flatfile:', size=(50, 1)), sg.FileBrowse()],
+          #[sg.Radio("Use Helium 10 cost", "Radio1", default=False)],
+          #[sg.Radio("Add Advertising Report", "Radio2", default=False)],
+          [sg.Submit(), sg.Cancel()]
+         ]
+button, filename = flatfile_form.Layout(layout).Read() 
+flatfile_form.close()
+
+flat_file = filename['Browse']
+settlement_df = pd.read_table(flat_file, sep='\t', dtype=dtypes)
+statement_timeframe =  get_statement_period(settlement_df)
+
+#Make a windoe that shows the statement timeframe and whether or not storage was charged
+print("\nStatement period start time: " + statement_timeframe[0])
+print("Statement period end time: " + statement_timeframe[1])
+#statement date should be in excel
+fba_inventory_report = input("Manage FBA Inventory Archive CSV report name: ")
+manage_fba_inventory_df = pd.read_csv(fba_inventory_report, encoding = 'latin1')
+asins_and_skus_df = get_asin_and_title(manage_fba_inventory_df)
+if monthly_storage_charged(settlement_df):
+    storage_report = input("\nMonthly Storage was charged in this statement. Please enter corresponding monthly storage report.\n\nMonthly Storage Report CSV name: ")
+    monthly_storage_df =  pd.read_csv(storage_report, encoding='latin1')
+    storage_sku_df = get_storage_with_sku(monthly_storage_df, manage_fba_inventory_df)
+adding_advertising = input("\nWould you like to add advertising(y/n): ").lower() == 'y'
+if adding_advertising:
+    print("Please input filename for advertising xlsx report for the appropiate time range.")
+    advertising_report = input("Sponsored products XLSX report name: ")
+    advertising_df = pd.read_excel(advertising_report)
+    advertising_spend = get_advertising_spend(advertising_df)
+adding_cost = input("\nWould you like to add Cost(y/n): ").lower() == 'y'
+if adding_cost:
+    helium10 = input("Helium 10 Cogs File (CSV): ")
+    helium10_df = pd.read_csv(helium10)
+    product_cost_df = get_cost(helium10_df)
 
 finalized_report = main_table(settlement_df)
 overview_tab = get_overview(settlement_df)
