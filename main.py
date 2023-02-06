@@ -259,9 +259,6 @@ flatfile_form = sg.FlexForm('Settlement Analyzer')
 layout = [
           [sg.Text('Please select Flat File (v2)')],
           [sg.Text('Statement File: ', size=(50, 1)), sg.FileBrowse()],
-          #add these two later
-          #[sg.Radio("Use Helium 10 cost", "Radio1", default=False)], 
-          #[sg.Radio("Add Advertising Report", "Radio2", default=False)],
           [sg.Submit(), sg.Cancel()]
          ]
 button, filename = flatfile_form.Layout(layout).Read() 
