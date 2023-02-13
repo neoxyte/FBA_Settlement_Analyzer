@@ -256,6 +256,16 @@ def get_overview(settlement_df):
     overview = pd.concat([overview, non_sku_df])
     return overview
 
+def filter_niro_skus(final_table_df):
+    return final_table_df.filter(like = 'NIRO', axis=0)
+    
+
+def filter_hd_skus(final_table_df):
+    return final_table_df.filter(like = 'HD', axis=0)
+
+def filter_other_skus(final_table_df):
+    return final_table_df.filter(like = 'MED', axis=0)
+
 def advertising_table(main_df):
     '''Returns a dataframe consisting of the advertising breakdown. using the main dataframe from main_table function and the advertising df'''
     '''
@@ -278,6 +288,9 @@ def export_report(filename):
     writer = pd.ExcelWriter(filename + ".xlsx", engine='xlsxwriter')
     finalized_report.to_excel(writer, sheet_name='Sales')
     overview_tab.to_excel(writer, sheet_name='Overview')
+    niro_tab.to_excel(writer, sheet_name='NIRO')
+    hd_tab.to_excel(writer, sheet_name='HD')
+    other_tab.to_excel(writer, sheet_name='Other')
     for column in finalized_report:
         column_length = max(finalized_report[column].astype(str).map(len).max(), len(column))
         col_idx = finalized_report.columns.get_loc(column)
@@ -368,6 +381,9 @@ if adding_cost:
 
 finalized_report = main_table(settlement_df)
 overview_tab = get_overview(settlement_df)
+niro_tab = filter_niro_skus(finalized_report)
+hd_tab = filter_hd_skus(finalized_report)
+other_tab = filter_other_skus(finalized_report)
 
 output_form= sg.FlexForm('Settlement Analyzer')
 layout = [
