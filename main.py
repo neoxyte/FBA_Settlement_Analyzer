@@ -171,7 +171,7 @@ def get_cost(helium10_df):
     cost = cost.rename(columns={"SKU": 'sku', 'PRODUCT COST': 'Product Cost', 'SHIPPING COST': 'Packing Cost'})
     cost['Cost Per Unit'] = cost['Product Cost']  + cost['Packing Cost']
     cost = cost.groupby('sku').sum()
-    index_dropping = cost[cost['Cost Per Unit'] ==0].index
+    index_dropping = cost[cost['Cost Per Unit'] == 0].index
     cost.drop(index_dropping, inplace=True)
     return cost
 
@@ -190,8 +190,10 @@ def main_table(settlement_df):
         settlement_analysis['Advertising Spend'] = settlement_analysis['Advertising Spend'].fillna(0)
         if monthly_storage_charged(settlement_df):
             settlement_analysis['Total Return'] = settlement_analysis['Amazon Revenue'] + settlement_analysis['Storage Fee'] + settlement_analysis['Advertising Spend']
+            settlement_analysis['Total (w/o Advertising)'] = settlement_analysis['Amazon Revenue'] + settlement_analysis['Storage Fee'] 
         else:
             settlement_analysis['Total Return'] = settlement_analysis['Amazon Revenue'] + settlement_analysis['Advertising Spend']
+            settlement_analysis['Total (w/o Advertising)']  = settlement_analysis['Amazon Revenue'] 
         index_dropping = settlement_analysis[(settlement_analysis['Amazon Revenue'] ==0) & (settlement_analysis['Advertising Spend'] ==0) & (settlement_analysis['Total Return'] ==0)].index
         settlement_analysis.drop(index_dropping, inplace=True)
     else:
@@ -201,6 +203,8 @@ def main_table(settlement_df):
             settlement_analysis['Total Return'] = settlement_analysis['Amazon Revenue']
     settlement_analysis['Total Units'].fillna(0, inplace=True)
     settlement_analysis['Return Per Unit'] = settlement_analysis['Total Return'] /  settlement_analysis['Total Units']
+    if adding_advertising:
+        settlement_analysis['Return Per Unit (w/o Advertising)'] = settlement_analysis['Total (w/o Advertising)'] / settlement_analysis['Total Units']
     if adding_cost:
         settlement_analysis = pd.concat([settlement_analysis, product_cost_df], axis=1)
         settlement_analysis.fillna({'Packing Cost':0, 'Cost Per Unit':0, 'Product Cost': 0}, inplace=True)
@@ -209,9 +213,12 @@ def main_table(settlement_df):
         settlement_analysis.replace([np.inf, -np.inf], np.nan, inplace=True) 
         settlement_analysis = settlement_analysis.dropna(subset=['Total Return'])
         settlement_analysis = settlement_analysis.sort_values('Total Profit', ascending=False)
+        settlement_analysis["ROI"] = settlement_analysis["Total Profit"] / settlement_analysis['Total Cost'] * -1 
+        settlement_analysis = settlement_analysis.dropna(subset=['Commission'])
     else:
         settlement_analysis.replace([np.inf, -np.inf], np.nan, inplace=True) 
         settlement_analysis = settlement_analysis.dropna(subset=['Total Return'])
+        settlement_analysis = settlement_analysis.dropna(subset=['Commission'])
         settlement_analysis = settlement_analysis.sort_values('Total Return', ascending=False)
     return  settlement_analysis
 
