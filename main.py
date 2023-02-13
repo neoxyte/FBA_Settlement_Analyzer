@@ -3,6 +3,7 @@ import xlsxwriter
 import numpy as np
 import PySimpleGUI as sg
 
+pd.set_option('display.precision', 2)
 
 #ignores runtime warnings
 import warnings
@@ -67,6 +68,12 @@ def get_salesbased_revenue(settlement_df):
     sales_revenue = sales_revenue.groupby('sku').sum()
     return sales_revenue.rename(columns={'amount':'Sales Revenue'})
 
+def get_average_sales_price(settlement_df):
+    units = get_units_sold(settlement_df)
+    sales_revenue = get_salesbased_revenue(settlement_df)
+    sales_revenue['Average Price'] =  sales_revenue['Sales Revenue'] / units['Units Sold']
+    return sales_revenue['Average Price']
+
 def get_commission(settlement_df):
     '''Return comission Column'''
     commission = settlement_df.loc[(settlement_df['amount-description'] == 'Commission')]
@@ -74,12 +81,33 @@ def get_commission(settlement_df):
     commission = commission.groupby('sku').sum()
     return commission.rename(columns={'amount':'Commission'})
 
+def get_average_commision_per_unit(settlement_df):
+    '''Returns Average Comission per Unit'''
+    units = get_units_sold(settlement_df)
+    commission = get_commission(settlement_df)
+    commission['Commision Per Unit'] = commission['Commission'] / units['Units Sold']
+    return commission['Commision Per Unit']
+
+def get_commission_percent(settlement_df):
+    '''Returns Comission as a percent'''
+    comission = get_commission(settlement_df)
+    sales_revenue = get_salesbased_revenue(settlement_df)
+    comission['Commission Percent'] = (comission['Commission']/ sales_revenue['Sales Revenue'])*-1
+    return comission['Commission Percent']
+
 def get_fba_fees(settlement_df):
     '''Get all FBA fees'''
     fba_fees = settlement_df.loc[(settlement_df['amount-description'] == 'FBAPerOrderFulfillmentFee') | (settlement_df['amount-description'] == 'FBAPerUnitFulfillmentFee') | (settlement_df['amount-description'] == 'FBAWeightBasedFee')]
     fba_fees = fba_fees[['sku', 'amount']]
     fba_fees = fba_fees.groupby('sku').sum()
     return fba_fees.rename(columns={'amount':'FBA Fees'})
+
+def get_average_fba_fees(settlement_df):
+    '''Gets an average fba fee per units'''
+    units = get_units_sold(settlement_df)
+    fba_fees = get_fba_fees(settlement_df)
+    fba_fees['FBA Fee Average'] = fba_fees['FBA Fees'] / units['Units Sold']
+    return fba_fees['FBA Fee Average']
 
 def get_nonsales_revenue(settlement_df):
     '''Get revenue for the following: COMPENSATED_CLAWBACK, FREE_REPLACEMENT_REFUND_ITEMS, RefundCommission, RestockingFee, REVERSAL_REIMBURSEMENT,
@@ -151,7 +179,7 @@ def main_table(settlement_df):
     '''Returns a dataframe consisting of all columns'''
     settlement_analysis = pd.concat([asins_and_skus_df, get_units_sold(settlement_df), get_nonsales_units(settlement_df), get_merchantfulfilled_units(settlement_df)], axis=1)
     settlement_analysis['Total Units'] = settlement_analysis['Units Sold'] + settlement_analysis['Non-Sale Units'] + settlement_analysis['Merchant Fulfilled Units']
-    settlement_analysis = pd.concat([settlement_analysis, get_salesbased_revenue(settlement_df), get_commission(settlement_df),get_fba_fees(settlement_df), get_nonsales_revenue(settlement_df)], axis=1)
+    settlement_analysis = pd.concat([settlement_analysis, get_salesbased_revenue(settlement_df), get_commission(settlement_df), get_commission_percent(settlement_df), get_average_commision_per_unit(settlement_df),get_fba_fees(settlement_df), get_average_fba_fees(settlement_df), get_nonsales_revenue(settlement_df), get_average_sales_price(settlement_df)], axis=1)
     settlement_analysis['Amazon Revenue'] = settlement_analysis['Sales Revenue'] + settlement_analysis['Commission'] + settlement_analysis['FBA Fees'] + settlement_analysis['Non-Sales Revenue'] 
     settlement_analysis['Amazon Revenue'] = settlement_analysis['Amazon Revenue'].fillna(0)
     if monthly_storage_charged(settlement_df):
@@ -217,9 +245,6 @@ def get_overview(settlement_df):
     if adding_advertising:
         advertising_total = advertising_spend.sum()[0]
         overview['Advertising Total'] = advertising_total
-    #if adding_cost:
-    #    cost_total = product_cost_df['Cost Per Unit'].sum() 
-    #    overview['Product Cost Total'] = cost_total
     overview = pd.DataFrame.from_dict(overview,orient='index', columns=['amount'])
     overview = pd.concat([overview, non_sku_df])
     return overview
