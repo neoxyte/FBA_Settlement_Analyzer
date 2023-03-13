@@ -309,7 +309,6 @@ def export_report(filename):
     print("Exported to Excel as " + filename)
 
 
-#form to get the flatfile name
 flatfile_form = sg.FlexForm('Settlement Analyzer') 
 layout = [
           [sg.Text('Please select Flat File (v2)')],
@@ -319,9 +318,7 @@ layout = [
 button, filename = flatfile_form.Layout(layout).Read() 
 flat_file = filename['Browse']
 flatfile_form.close()
-
-
-
+settlement_df = pd.read_table(flat_file, sep='\t', dtype=dtypes)
 invoiced_form = sg.FlexForm('Settlement Analyzer') 
 layout = [
           [sg.Text('Would you like to add invoiced orders too?')],
@@ -332,13 +329,20 @@ layout = [
 button, add_invoiced =  invoiced_form.Layout(layout).Read() 
 invoiced_form.close()
 adding_invoiced = add_invoiced[0] 
+if adding_invoiced:
+    get_invoiced_form = sg.FlexForm('Settlement Analyzer') 
+    layout = [
+            [sg.Text('Please select Invoiced Flat File (v2)')],
+            [sg.Text('Invoiced Flat File (V2): ', size=(50, 1)), sg.FileBrowse()],
+            [sg.Submit(), sg.Cancel()]
+            ]
+    button, invoice_filename = get_invoiced_form.Layout(layout).Read() 
+    invoiced_file = invoice_filename['Browse']
+    get_invoiced_form.close()
+    invoice_df = pd.read_table(invoiced_file, sep='\t', dtype=dtypes)
+    combined_df = pd.concat([settlement_df, invoice_df])
 
-print(adding_invoiced)
 
-
-
-
-settlement_df = pd.read_table(flat_file, sep='\t', dtype=dtypes)
 statement_timeframe =  get_statement_period(settlement_df)
 timeframe_layout = [  [sg.Text('Statement period start time: ' + statement_timeframe[0])],
             [sg.Text('Statement period end time: ' + statement_timeframe[1])],
@@ -346,6 +350,7 @@ timeframe_layout = [  [sg.Text('Statement period start time: ' + statement_timef
 window = sg.Window('Window Title', timeframe_layout)
 event = window.read()
 window.close()
+settlement_df = combined_df
 fba_archive_form = sg.FlexForm('Settlement Analyzer')
 layout = [
           [sg.Text('Please select FBA Archive report')],
