@@ -287,7 +287,8 @@ def get_refunds(settlement_df, final_table_df):
     refund_df = refund_df[refund_df['Refund Total'] != 0]
     refund_df = refund_df.rename(columns={refund_df.columns[1]: 'Total Sales'})
     refund_df['Refund Total'] = refund_df['Refund Total'] * -1
-    refund_df['Refund Percentage of Sale'] = refund_df['Refund Total'] / refund_df['Total Sales']
+    refund_df['Refund Percentage of Sales'] = refund_df['Refund Total'] / refund_df['Total Sales']
+    refund_df = refund_df.sort_values(by='Refund Percentage of Sales', ascending=False)
     return refund_df
 
 def get_statement_period(settlement_df):
