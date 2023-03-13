@@ -210,12 +210,16 @@ def main_table(settlement_df):
         settlement_analysis = pd.concat([settlement_analysis, product_cost_df], axis=1)
         settlement_analysis.fillna({'Packing Cost':0, 'Cost Per Unit':0, 'Product Cost': 0}, inplace=True)
         settlement_analysis['Total Cost'] = settlement_analysis['Cost Per Unit'] * settlement_analysis['Total Units'] * -1
-        settlement_analysis['Cost (w/ Advertising'] = settlement_analysis['Total Cost']  + settlement_analysis['Advertising Spend']
+        if adding_advertising:
+            settlement_analysis['Cost (w/ Advertising'] = settlement_analysis['Total Cost']  + settlement_analysis['Advertising Spend']
         settlement_analysis['Total Profit'] = settlement_analysis['Total Cost'] + settlement_analysis['Total Return'] 
         #settlement_analysis.replace([np.inf, -np.inf], np.nan, inplace=True) 
         #settlement_analysis = settlement_analysis.dropna(subset=['Total Return'])
         settlement_analysis = settlement_analysis.sort_values('Total Profit', ascending=False)
         settlement_analysis["ROI"] = settlement_analysis["Total Profit"] / settlement_analysis['Total Cost'] * -1 
+        if adding_advertising:
+            settlement_analysis["ROI w/ advertising"] = settlement_analysis["Total Profit"] / settlement_analysis['Cost (w/ Advertising'] * -1 
+            settlement_analysis["ROI Difference"] = settlement_analysis["ROI w/ advertising"] - settlement_analysis["ROI"]
         #settlement_analysis = settlement_analysis.dropna(subset=['Commission'])
         settlement_analysis = settlement_analysis.dropna(subset=['Total Profit'])
     else:
