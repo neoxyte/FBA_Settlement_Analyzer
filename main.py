@@ -288,7 +288,13 @@ def get_statement_period(settlement_df):
     return statement_period
 
 def export_report(filename):
-    '''Export to Excel with multiple Worksheets'''
+    '''Export to Excel with multiple Worksheets. Uses settlement report date as suffix'''
+    report_date_range = get_statement_period(settlement_df)
+    start_date = report_date_range[0]
+    start_date = start_date[:10]
+    end_date = report_date_range[1]
+    end_date = end_date[:10]
+    filename = filename + "_" + start_date + "_to_" + end_date
     writer = pd.ExcelWriter(filename + ".xlsx", engine='xlsxwriter')
     finalized_report.to_excel(writer, sheet_name='Sales')
     overview_tab.to_excel(writer, sheet_name='Overview')
@@ -313,6 +319,25 @@ layout = [
 button, filename = flatfile_form.Layout(layout).Read() 
 flat_file = filename['Browse']
 flatfile_form.close()
+
+
+
+invoiced_form = sg.FlexForm('Settlement Analyzer') 
+layout = [
+          [sg.Text('Would you like to add invoiced orders too?')],
+          [sg.Radio("Yes", "Radio1", default=False)], 
+          [sg.Radio("No", "Radio2", default=False)],
+          [sg.Submit(), sg.Cancel()]
+         ]
+button, add_invoiced =  invoiced_form.Layout(layout).Read() 
+invoiced_form.close()
+adding_invoiced = add_invoiced[0] 
+
+print(adding_invoiced)
+
+
+
+
 settlement_df = pd.read_table(flat_file, sep='\t', dtype=dtypes)
 statement_timeframe =  get_statement_period(settlement_df)
 timeframe_layout = [  [sg.Text('Statement period start time: ' + statement_timeframe[0])],
@@ -391,7 +416,7 @@ other_tab = filter_other_skus(finalized_report)
 
 output_form= sg.FlexForm('Settlement Analyzer')
 layout = [
-        [sg.Text('Please type a file name')],
+        [sg.Text('Please type a file prefix')],
         [sg.Input()],
         [sg.Submit(), sg.Cancel()]
         ]
