@@ -187,3 +187,6 @@ build 03-13-2023/python311.dll
 build 03-13-2023/python3.dll
 build 03-13-2023/main.exe
 build 03-13-2023.zip
+*.exe
+*.dll
+*.zip
