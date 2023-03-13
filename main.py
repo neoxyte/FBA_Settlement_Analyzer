@@ -50,7 +50,6 @@ def get_units_sold(settlement_df):
 def get_nonsales_units(settlement_df):
     '''Returns units taken from inventory and compensated but not as sale'''
     #ns_units = settlement_df.loc[(settlement_df['amount-description'] == 'WAREHOUSE_LOST') | (settlement_df['amount-description'] == 'WAREHOUSE_DAMAGE') | (settlement_df['amount-description'] == 'FREE_REPLACEMENT_REFUND_ITEMS')]
-    #TODO add the other types of reimbursements
     ns_units = settlement_df.loc[(settlement_df['amount-description'] == 'COMPENSATED_CLAWBACK') | (settlement_df['amount-description'] == 'FREE_REPLACEMENT_REFUND_ITEMS') | (settlement_df['amount-description'] == 'RefundCommission') | (settlement_df['amount-description'] == 'REVERSAL_REIMBURSEMENT') | (settlement_df['amount-description'] == 'WAREHOUSE_DAMAGE') | (settlement_df['amount-description'] == 'WAREHOUSE_DAMAGE_EXCEPTION') | (settlement_df['amount-description'] == 'WAREHOUSE_LOST') |  (settlement_df['amount-description'] == 'WAREHOUSE_LOST_MANUAL')]
     ns_units = ns_units[['sku', 'quantity-purchased']]
     ns_units = ns_units.groupby('sku').sum()
@@ -269,7 +268,6 @@ def get_overview(settlement_df):
 
 def filter_niro_skus(final_table_df):
     return final_table_df.filter(like = 'NIRO', axis=0)
-    
 
 def filter_hd_skus(final_table_df):
     return final_table_df.filter(like = 'HD', axis=0)
@@ -277,14 +275,20 @@ def filter_hd_skus(final_table_df):
 def filter_other_skus(final_table_df):
     return final_table_df.filter(like = 'MED', axis=0)
 
-def advertising_table(main_df):
-    '''Returns a dataframe consisting of the advertising breakdown. using the main dataframe from main_table function and the advertising df'''
-    '''
-    Possible ideas:
-        take the main table then adjust it
-    '''
-    ad_df = main_df
-    return main_df
+def get_refunds(settlement_df, final_table_df):
+    '''Returns a dataframe showing transcation type refund only'''
+    refund_df = settlement_df.loc[settlement_df['transaction-type'] == 'Refund']
+    refund_df = refund_df.groupby('sku').sum()
+    refund_df = refund_df.drop('quantity-purchased', axis=1)
+    refund_df = refund_df.rename(columns={'amount':'Refund Total'})
+    total_sales_df = final_table_df['Sales Revenue']
+    refund_df = pd.concat([refund_df, total_sales_df])
+    refund_df = refund_df.groupby('sku').sum()
+    refund_df = refund_df[refund_df['Refund Total'] != 0]
+    refund_df = refund_df.rename(columns={refund_df.columns[1]: 'Total Sales'})
+    refund_df['Refund Total'] = refund_df['Refund Total'] * -1
+    refund_df['Refund Percentage of Sale'] = refund_df['Refund Total'] / refund_df['Total Sales']
+    return refund_df
 
 def get_statement_period(settlement_df):
     '''Returns a list with start and end date'''
@@ -308,6 +312,7 @@ def export_report(filename):
     niro_tab.to_excel(writer, sheet_name='NIRO')
     hd_tab.to_excel(writer, sheet_name='HD')
     other_tab.to_excel(writer, sheet_name='Other')
+    refund_tab.to_excel(writer, sheet_name="Refunds")
     for column in finalized_report:
         column_length = max(finalized_report[column].astype(str).map(len).max(), len(column))
         col_idx = finalized_report.columns.get_loc(column)
@@ -424,6 +429,7 @@ overview_tab = get_overview(settlement_df)
 niro_tab = filter_niro_skus(finalized_report)
 hd_tab = filter_hd_skus(finalized_report)
 other_tab = filter_other_skus(finalized_report)
+refund_tab = get_refunds(settlement_df, finalized_report)
 output_form= sg.FlexForm('Settlement Analyzer')
 layout = [
         [sg.Text('Please type a file prefix')],
