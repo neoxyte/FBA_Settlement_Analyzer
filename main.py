@@ -210,6 +210,7 @@ def main_table(settlement_df):
         settlement_analysis = pd.concat([settlement_analysis, product_cost_df], axis=1)
         settlement_analysis.fillna({'Packing Cost':0, 'Cost Per Unit':0, 'Product Cost': 0}, inplace=True)
         settlement_analysis['Total Cost'] = settlement_analysis['Cost Per Unit'] * settlement_analysis['Total Units'] * -1
+        settlement_analysis['Cost (w/ Advertising'] = settlement_analysis['Total Cost']  + settlement_analysis['Advertising Spend']
         settlement_analysis['Total Profit'] = settlement_analysis['Total Cost'] + settlement_analysis['Total Return'] 
         #settlement_analysis.replace([np.inf, -np.inf], np.nan, inplace=True) 
         #settlement_analysis = settlement_analysis.dropna(subset=['Total Return'])
@@ -341,8 +342,6 @@ if adding_invoiced:
     get_invoiced_form.close()
     invoice_df = pd.read_table(invoiced_file, sep='\t', dtype=dtypes)
     combined_df = pd.concat([settlement_df, invoice_df])
-
-
 statement_timeframe =  get_statement_period(settlement_df)
 timeframe_layout = [  [sg.Text('Statement period start time: ' + statement_timeframe[0])],
             [sg.Text('Statement period end time: ' + statement_timeframe[1])],
@@ -350,7 +349,8 @@ timeframe_layout = [  [sg.Text('Statement period start time: ' + statement_timef
 window = sg.Window('Window Title', timeframe_layout)
 event = window.read()
 window.close()
-settlement_df = combined_df
+if adding_invoiced:
+    settlement_df = combined_df
 fba_archive_form = sg.FlexForm('Settlement Analyzer')
 layout = [
           [sg.Text('Please select FBA Archive report')],
@@ -418,7 +418,6 @@ overview_tab = get_overview(settlement_df)
 niro_tab = filter_niro_skus(finalized_report)
 hd_tab = filter_hd_skus(finalized_report)
 other_tab = filter_other_skus(finalized_report)
-
 output_form= sg.FlexForm('Settlement Analyzer')
 layout = [
         [sg.Text('Please type a file prefix')],
