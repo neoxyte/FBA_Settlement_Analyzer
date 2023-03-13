@@ -184,3 +184,6 @@ build 021323/exe.win-amd64-3.11/python311.dll
 build 021323/exe.win-amd64-3.11/Settlement Analyzer_02-13-2023.exe
 build 021323/exe.win-amd64-3.11/Settlement Analyzer_02-13-2023.zip
 build 03-13-2023/python311.dll
+build 03-13-2023/python3.dll
+build 03-13-2023/main.exe
+build 03-13-2023.zip
