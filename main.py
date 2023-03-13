@@ -185,6 +185,7 @@ def main_table(settlement_df):
     if monthly_storage_charged(settlement_df):
         settlement_analysis = pd.concat([settlement_analysis, storage_sku_df], axis=1)
         settlement_analysis['Storage Fee'] = settlement_analysis['Storage Fee'].fillna(0)
+        #settlement_analysis = settlement_analysis.dropna(subset=['Storage Fee'])
     if adding_advertising:
         settlement_analysis = pd.concat([settlement_analysis, advertising_spend], axis=1)
         settlement_analysis['Advertising Spend'] = settlement_analysis['Advertising Spend'].fillna(0)
@@ -215,11 +216,14 @@ def main_table(settlement_df):
         settlement_analysis = settlement_analysis.sort_values('Total Profit', ascending=False)
         settlement_analysis["ROI"] = settlement_analysis["Total Profit"] / settlement_analysis['Total Cost'] * -1 
         #settlement_analysis = settlement_analysis.dropna(subset=['Commission'])
+        settlement_analysis = settlement_analysis.dropna(subset=['Total Profit'])
     else:
         #settlement_analysis.replace([np.inf, -np.inf], np.nan, inplace=True) 
         #settlement_analysis = settlement_analysis.dropna(subset=['Total Return'])
         #settlement_analysis = settlement_analysis.dropna(subset=['Commission'])
         settlement_analysis = settlement_analysis.sort_values('Total Return', ascending=False)
+    settlement_analysis = settlement_analysis.fillna(0)
+    settlement_analysis.replace([np.inf, -np.inf], np.nan, inplace=True) 
     return  settlement_analysis
 
 def get_non_skus(settlement_df):
