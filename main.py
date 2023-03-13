@@ -210,15 +210,15 @@ def main_table(settlement_df):
         settlement_analysis.fillna({'Packing Cost':0, 'Cost Per Unit':0, 'Product Cost': 0}, inplace=True)
         settlement_analysis['Total Cost'] = settlement_analysis['Cost Per Unit'] * settlement_analysis['Total Units'] * -1
         settlement_analysis['Total Profit'] = settlement_analysis['Total Cost'] + settlement_analysis['Total Return'] 
-        settlement_analysis.replace([np.inf, -np.inf], np.nan, inplace=True) 
-        settlement_analysis = settlement_analysis.dropna(subset=['Total Return'])
+        #settlement_analysis.replace([np.inf, -np.inf], np.nan, inplace=True) 
+        #settlement_analysis = settlement_analysis.dropna(subset=['Total Return'])
         settlement_analysis = settlement_analysis.sort_values('Total Profit', ascending=False)
         settlement_analysis["ROI"] = settlement_analysis["Total Profit"] / settlement_analysis['Total Cost'] * -1 
-        settlement_analysis = settlement_analysis.dropna(subset=['Commission'])
+        #settlement_analysis = settlement_analysis.dropna(subset=['Commission'])
     else:
-        settlement_analysis.replace([np.inf, -np.inf], np.nan, inplace=True) 
-        settlement_analysis = settlement_analysis.dropna(subset=['Total Return'])
-        settlement_analysis = settlement_analysis.dropna(subset=['Commission'])
+        #settlement_analysis.replace([np.inf, -np.inf], np.nan, inplace=True) 
+        #settlement_analysis = settlement_analysis.dropna(subset=['Total Return'])
+        #settlement_analysis = settlement_analysis.dropna(subset=['Commission'])
         settlement_analysis = settlement_analysis.sort_values('Total Return', ascending=False)
     return  settlement_analysis
 
