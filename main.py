@@ -314,13 +314,15 @@ def export_report(filename):
     hd_tab.to_excel(writer, sheet_name='HD')
     other_tab.to_excel(writer, sheet_name='Other')
     refund_tab.to_excel(writer, sheet_name="Refunds")
+
+    #fix below cause not formatting
+    '''
     for column in finalized_report:
         column_length = max(finalized_report[column].astype(str).map(len).max(), len(column))
         col_idx = finalized_report.columns.get_loc(column)
         writer.sheets['Overview'].set_column(col_idx, col_idx, column_length)
+    '''
     writer.close()
-    print("Exported to Excel as " + filename)
-
 
 flatfile_form = sg.FlexForm('Settlement Analyzer') 
 layout = [
