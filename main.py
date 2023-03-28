@@ -288,7 +288,6 @@ def get_refunds(settlement_df, final_table_df):
     refund_df = refund_df.sort_values(by='Refund Percentage of Sales', ascending=False)
     return refund_df
     
-
 def get_statement_period(settlement_df):
     '''Returns a list with start and end date'''
     dates = settlement_df [settlement_df ['settlement-start-date'].notna()][['settlement-start-date', 'settlement-end-date']] 
