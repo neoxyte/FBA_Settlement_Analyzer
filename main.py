@@ -211,7 +211,7 @@ def main_table(settlement_df):
         settlement_analysis['Total Cost'] = settlement_analysis['Cost Per Unit'] * settlement_analysis['Total Units'] * -1
         if adding_advertising:
             settlement_analysis['Cost (w/ Advertising'] = settlement_analysis['Total Cost']  + settlement_analysis['Advertising Spend']
-        settlement_analysis['Total Profit'] = settlement_analysis['Total Cost'] + settlement_analysis['Total Return'] 
+        settlement_analysis['Total Profit'] = settlement_analysis['Total Cost'] + settlement_analysis['Total Return'] - settlement_analysis['Non-Sales Revenue'] 
         #settlement_analysis.replace([np.inf, -np.inf], np.nan, inplace=True) 
         #settlement_analysis = settlement_analysis.dropna(subset=['Total Return'])
         settlement_analysis = settlement_analysis.sort_values('Total Profit', ascending=False)
@@ -227,9 +227,39 @@ def main_table(settlement_df):
         #settlement_analysis = settlement_analysis.dropna(subset=['Commission'])
         settlement_analysis = settlement_analysis.sort_values('Total Return', ascending=False)
     settlement_analysis = settlement_analysis.fillna(0)
-    settlement_analysis.replace([np.inf, -np.inf], np.nan, inplace=True) 
-    return  settlement_analysis
+    settlement_analysis.replace([np.inf, -np.inf], np.nan, inplace=True)
+    return  rename_columns(settlement_analysis)
 
+def rename_columns(settlement_analysis):
+    new_df = settlement_analysis
+    new_df = new_df.rename(columns={
+        "product-name": "Title",
+        "Non-Sale Units": "N/S Units",
+        "Merchant Fulfilled Units": "MF Units",
+        "Total Units": "Total",
+        "Commission": "Comm",
+        "Commission Percent": "Comm %",
+        "Commision Per Unit": "Comm/Unit",
+        "FBA Fee Average": "Fee Avg",
+        "Non-Sales Revenue": "N/S Rev",
+        "Average Price": "Avg Price",
+        "Amazon Revenue": "Amz Rev",
+        "Return Per Unit": "Return/Unit"})
+    if monthly_storage_charged(settlement_df):
+        new_df = new_df.rename(columns={
+        "Storage Fee": "Storage"})
+    if adding_advertising:
+        new_df = new_df.rename(columns={
+        "Total (w/o Advertising)": "Total before Ads",
+        "Return Per Unit (w/o Advertising)": "Return/unit before Ads"})
+    if adding_cost:
+        new_df = new_df.rename(columns={
+        "Product Cost": "Cost",
+        "Packing Cost:": "Packing",
+        "Cost Per Unit": "COGS",
+        "Total Cost": "Total COGS"})
+    #make sure to rename columns differently if adding cost/advertising
+    return new_df
 def get_non_skus(settlement_df):
     '''Gets line items without a SKU  from the flat file. Such as Subscription, Monthly Storage, Reserve, Etc'''
     nonskus= settlement_df.loc[(settlement_df['amount-description'] == 'Subscription Fee')|
@@ -249,7 +279,7 @@ def get_overview(settlement_df):
     disbursement_total = settlement_df['amount'].sum()
     main_df = main_table(settlement_df)
     non_sku_df = get_non_skus(settlement_df)
-    amazon_revenue = main_df['Amazon Revenue'].sum()
+    amazon_revenue = main_df['Amz Rev'].sum()
     overview ={
         #'Disbursement Total': disbursement_total,
         'Amazon Revenue': amazon_revenue
@@ -384,7 +414,7 @@ if monthly_storage_charged(settlement_df):
     storage_form = sg.FlexForm('Settlement Analyzer') 
     storage_form_layout = [
             [sg.Text('Please select appropiate storage report (report corresponding to month before statement end date)')],
-            [sg.Text('Statement Start Date: ' + statement_timeframe[1])],
+            [sg.Text('Statement Start Date: ' + statement_timeframe[0])],
             [sg.Text('Monthly Storage Report:', size=(50, 1)), sg.FileBrowse()],
             [sg.Submit(), sg.Cancel()]
             ]
