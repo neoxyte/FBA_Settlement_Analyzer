@@ -277,15 +277,14 @@ def get_refunds(settlement_df, final_table_df):
     '''Returns a dataframe showing transcation type refund only'''
     refund_df = settlement_df.loc[settlement_df['transaction-type'] == 'Refund']
     refund_df = refund_df.groupby('sku').sum()
-    refund_df = refund_df.drop('quantity-purchased', axis=1)
-    refund_df = refund_df.rename(columns={'amount':'Refund Total'})
+    refund_df = refund_df["amount"]
+    refund_df = refund_df.rename("Refund Total")
     total_sales_df = final_table_df['Sales Revenue']
-    refund_df = pd.concat([refund_df, total_sales_df])
-    refund_df = refund_df.groupby('sku').sum()
-    refund_df = refund_df[refund_df['Refund Total'] != 0]
-    refund_df = refund_df.rename(columns={refund_df.columns[1]: 'Total Sales'})
+    refund_df = pd.concat([refund_df, total_sales_df], axis=1)
+    refund_df = refund_df.replace(to_replace=0, value=np.nan)
+    refund_df = refund_df.dropna(subset=["Refund Total"])
     refund_df['Refund Total'] = refund_df['Refund Total'] * -1
-    refund_df['Refund Percentage of Sales'] = refund_df['Refund Total'] / refund_df['Total Sales']
+    refund_df['Refund Percentage of Sales'] = refund_df['Refund Total'] / refund_df['Sales Revenue']
     refund_df = refund_df.sort_values(by='Refund Percentage of Sales', ascending=False)
     return refund_df
     
@@ -326,12 +325,12 @@ flat_file = filename['Browse']
 flatfile_form.close()
 settlement_df = pd.read_table(flat_file, sep='\t', dtype=dtypes)
 #invoiced_form = sg.FlexForm('Settlement Analyzer') 
-layout = [
-          [sg.Text('Would you like to add invoiced orders too?')],
-          [sg.Radio("Yes", "Radio1", default=False)], 
-          [sg.Radio("No", "Radio2", default=False)],
-          [sg.Submit(), sg.Cancel()]
-         ]
+#layout = [
+#          [sg.Text('Would you like to add invoiced orders too?')],
+#          [sg.Radio("Yes", "Radio1", default=False)], 
+#          [sg.Radio("No", "Radio2", default=False)],
+#          [sg.Submit(), sg.Cancel()]
+#         ]
 #button, add_invoiced =  invoiced_form.Layout(layout).Read() 
 #invoiced_form.close()
 #adding_invoiced = add_invoiced[0] 
