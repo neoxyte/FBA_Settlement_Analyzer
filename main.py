@@ -9,16 +9,13 @@ pd.set_option('display.precision', 2)
 import warnings
 warnings.filterwarnings("ignore")
 
-#debug mode 
-debug = False
-
 #data types for settlement flat file v2
 dtypes = {
     "settlement-id": "category",
     "settlement-start-date": "category",
     "settlement-end-date": "category",
     "deposit-date": "category",
-    "total-amount": "category",
+    "total-amount": "float64",
     "currency": "category",
     "transaction-type": "category",
     "order-id": "category",
@@ -203,7 +200,8 @@ def main_table(settlement_df):
             settlement_analysis['Total Return'] = settlement_analysis['Amazon Revenue'] + settlement_analysis['Storage Fee'] 
         else:
             settlement_analysis['Total Return'] = settlement_analysis['Amazon Revenue']
-    settlement_analysis['Total Units'].fillna(0, inplace=True)
+    #settlement_analysis['Total Units'].fillna(0, inplace=True)
+    #DEBUG1
     settlement_analysis['Return Per Unit'] = settlement_analysis['Total Return'] /  settlement_analysis['Total Units']
     if adding_advertising:
         settlement_analysis['Return Per Unit (w/o Advertising)'] = settlement_analysis['Total (w/o Advertising)'] / settlement_analysis['Total Units']
@@ -275,8 +273,8 @@ def filter_hd_skus(final_table_df):
 def filter_other_skus(final_table_df):
     return final_table_df.filter(like = 'MED', axis=0)
 
-def get_refunds(settlement_df, final_table_df):
-    '''Returns a dataframe showing transcation type refund only'''
+'''def get_refunds(settlement_df, final_table_df):
+    Returns a dataframe showing transcation type refund only
     refund_df = settlement_df.loc[settlement_df['transaction-type'] == 'Refund']
     refund_df = refund_df.groupby('sku').sum()
     refund_df = refund_df.drop('quantity-purchased', axis=1)
@@ -290,6 +288,7 @@ def get_refunds(settlement_df, final_table_df):
     refund_df['Refund Percentage of Sales'] = refund_df['Refund Total'] / refund_df['Total Sales']
     refund_df = refund_df.sort_values(by='Refund Percentage of Sales', ascending=False)
     return refund_df
+    '''
 
 def get_statement_period(settlement_df):
     '''Returns a list with start and end date'''
@@ -313,15 +312,7 @@ def export_report(filename):
     niro_tab.to_excel(writer, sheet_name='NIRO')
     hd_tab.to_excel(writer, sheet_name='HD')
     other_tab.to_excel(writer, sheet_name='Other')
-    refund_tab.to_excel(writer, sheet_name="Refunds")
-
-    #fix below cause not formatting
-    '''
-    for column in finalized_report:
-        column_length = max(finalized_report[column].astype(str).map(len).max(), len(column))
-        col_idx = finalized_report.columns.get_loc(column)
-        writer.sheets['Overview'].set_column(col_idx, col_idx, column_length)
-    '''
+    #refund_tab.to_excel(writer, sheet_name="Refunds")
     writer.close()
 
 flatfile_form = sg.FlexForm('Settlement Analyzer') 
@@ -343,7 +334,8 @@ layout = [
          ]
 button, add_invoiced =  invoiced_form.Layout(layout).Read() 
 invoiced_form.close()
-adding_invoiced = add_invoiced[0] 
+#adding_invoiced = add_invoiced[0] 
+adding_invoiced = False
 if adding_invoiced:
     get_invoiced_form = sg.FlexForm('Settlement Analyzer') 
     layout = [
@@ -355,7 +347,21 @@ if adding_invoiced:
     invoiced_file = invoice_filename['Browse']
     get_invoiced_form.close()
     invoice_df = pd.read_table(invoiced_file, sep='\t', dtype=dtypes)
+    #remove the total amount/date row from the invoiced one
+    invoice_df =invoice_df.drop(index=0)
     combined_df = pd.concat([settlement_df, invoice_df])
+    ''' remove when finished debuging combining invoiced and main settlements
+    #debug
+    print(combined_df)
+    writer = pd.ExcelWriter("debug_output_1" + ".xlsx", engine='xlsxwriter')
+    combined_df.to_excel(writer, sheet_name='Test')
+    writer.close()
+else:
+    #otherdebug
+    print(settlement_df)
+    writer = pd.ExcelWriter("debug_output" + ".xlsx", engine='xlsxwriter')
+    settlement_df.to_excel(writer, sheet_name="test1")
+    writer.close()'''
 statement_timeframe =  get_statement_period(settlement_df)
 timeframe_layout = [  [sg.Text('Statement period start time: ' + statement_timeframe[0])],
             [sg.Text('Statement period end time: ' + statement_timeframe[1])],
@@ -426,13 +432,12 @@ if adding_cost:
     cost_form.close()
     helium10_df = pd.read_csv(helium10)
     product_cost_df = get_cost(helium10_df)
-
 finalized_report = main_table(settlement_df)
 overview_tab = get_overview(settlement_df)
 niro_tab = filter_niro_skus(finalized_report)
 hd_tab = filter_hd_skus(finalized_report)
 other_tab = filter_other_skus(finalized_report)
-refund_tab = get_refunds(settlement_df, finalized_report)
+#refund_tab = get_refunds(settlement_df, finalized_report)
 output_form= sg.FlexForm('Settlement Analyzer')
 layout = [
         [sg.Text('Please type a file prefix')],
