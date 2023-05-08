@@ -212,6 +212,7 @@ def main_table(settlement_df):
         if adding_advertising:
             settlement_analysis['Cost (w/ Advertising'] = settlement_analysis['Total Cost']  + settlement_analysis['Advertising Spend']
         settlement_analysis['Total Profit'] = settlement_analysis['Total Cost'] + settlement_analysis['Total Return'] - settlement_analysis['Non-Sales Revenue'] 
+        #possibly delete non-sale revenue from above, run 2 reports and compare
         #settlement_analysis.replace([np.inf, -np.inf], np.nan, inplace=True) 
         #settlement_analysis = settlement_analysis.dropna(subset=['Total Return'])
         settlement_analysis = settlement_analysis.sort_values('Total Profit', ascending=False)
@@ -293,6 +294,10 @@ def get_overview(settlement_df):
     overview = pd.DataFrame.from_dict(overview,orient='index', columns=['amount'])
     overview = pd.concat([overview, non_sku_df])
     return overview
+
+def get_non_sale_revenue_tab(settlement_df):
+    '''Makes a dataframe for non-sale revenue (units and revenue)'''
+    return True
 
 def filter_niro_skus(final_table_df):
     return final_table_df.filter(like = 'NIRO', axis=0)
