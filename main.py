@@ -39,7 +39,7 @@ dtypes = {
 
 def get_units_sold(settlement_df):
     '''Get's all units sold (only units charged an fba fee count here'''
-    units_sold = settlement_df.loc[settlement_df['amount-description'] == 'FBAPerUnitFulfillmentFee']
+    units_sold = settlement_df.loc[(settlement_df['fulfillment-id']== 'AFN') & (settlement_df['amount-description']=='Commission')]
     units_sold = units_sold[['sku','quantity-purchased']]
     units_sold = units_sold.groupby('sku').sum()
     return units_sold.rename(columns={'quantity-purchased':'Units Sold'})
@@ -47,9 +47,13 @@ def get_units_sold(settlement_df):
 def get_nonsales_units(settlement_df):
     '''Returns units taken from inventory and compensated but not as sale'''
     #ns_units = settlement_df.loc[(settlement_df['amount-description'] == 'WAREHOUSE_LOST') | (settlement_df['amount-description'] == 'WAREHOUSE_DAMAGE') | (settlement_df['amount-description'] == 'FREE_REPLACEMENT_REFUND_ITEMS')]
-    ns_units = settlement_df.loc[(settlement_df['amount-description'] == 'COMPENSATED_CLAWBACK') | (settlement_df['amount-description'] == 'FREE_REPLACEMENT_REFUND_ITEMS') | (settlement_df['amount-description'] == 'RefundCommission') | (settlement_df['amount-description'] == 'REVERSAL_REIMBURSEMENT') | (settlement_df['amount-description'] == 'WAREHOUSE_DAMAGE') | (settlement_df['amount-description'] == 'WAREHOUSE_DAMAGE_EXCEPTION') | (settlement_df['amount-description'] == 'WAREHOUSE_LOST') |  (settlement_df['amount-description'] == 'WAREHOUSE_LOST_MANUAL')]
+    ns_units = settlement_df.loc[(settlement_df['amount-description'] == 'FREE_REPLACEMENT_REFUND_ITEMS') | (settlement_df['amount-description'] == 'RefundCommission') | (settlement_df['amount-description'] == 'REVERSAL_REIMBURSEMENT') | (settlement_df['amount-description'] == 'WAREHOUSE_DAMAGE') | (settlement_df['amount-description'] == 'WAREHOUSE_DAMAGE_EXCEPTION') | (settlement_df['amount-description'] == 'WAREHOUSE_LOST') |  (settlement_df['amount-description'] == 'WAREHOUSE_LOST_MANUAL')]
     ns_units = ns_units[['sku', 'quantity-purchased']]
+    #clawback_units =settlement_df.loc[ (settlement_df['amount-description'] == 'COMPENSATED_CLAWBACK') ]
+    #clawback_units = clawback_units[['sku', 'quantity-purchased']]
     ns_units = ns_units.groupby('sku').sum()
+    #clawback_units = clawback_units.groupby('sku').sum()
+    #ns_units = ns_units['quantity-purchased'] - clawback_units['quantity-purchased']
     return ns_units.rename(columns={'quantity-purchased':'Non-Sale Units'})
 
 def get_merchantfulfilled_units(settlement_df):
@@ -211,7 +215,7 @@ def main_table(settlement_df):
         settlement_analysis['Total Cost'] = settlement_analysis['Cost Per Unit'] * settlement_analysis['Total Units'] * -1
         if adding_advertising:
             settlement_analysis['Cost (w/ Advertising'] = settlement_analysis['Total Cost']  + settlement_analysis['Advertising Spend']
-        settlement_analysis['Total Profit'] = settlement_analysis['Total Cost'] + settlement_analysis['Total Return'] - settlement_analysis['Non-Sales Revenue'] 
+        settlement_analysis['Total Profit'] = settlement_analysis['Total Cost'] + settlement_analysis['Total Return'] 
         #possibly delete non-sale revenue from above, run 2 reports and compare
         #settlement_analysis.replace([np.inf, -np.inf], np.nan, inplace=True) 
         #settlement_analysis = settlement_analysis.dropna(subset=['Total Return'])
@@ -245,7 +249,8 @@ def rename_columns(settlement_analysis):
         "Non-Sales Revenue": "N/S Rev",
         "Average Price": "Avg Price",
         "Amazon Revenue": "Amz Rev",
-        "Return Per Unit": "Return/Unit"})
+        "Return Per Unit": "Return/Unit",
+        "Advertising Spend": "Ad Spend"})
     if monthly_storage_charged(settlement_df):
         new_df = new_df.rename(columns={
         "Storage Fee": "Storage"})
@@ -307,6 +312,7 @@ def filter_hd_skus(final_table_df):
 
 def filter_other_skus(final_table_df):
     return final_table_df.filter(like = 'MED', axis=0)
+#add MD here
 
 def get_refunds(settlement_df, final_table_df):
     '''Returns a dataframe showing transcation type refund only'''
@@ -345,7 +351,7 @@ def export_report(filename):
     niro_tab.to_excel(writer, sheet_name='NIRO')
     hd_tab.to_excel(writer, sheet_name='HD')
     other_tab.to_excel(writer, sheet_name='Other')
-    refund_tab.to_excel(writer, sheet_name="Refunds")
+    #refund_tab.to_excel(writer, sheet_name="Refunds")
     writer.close()
 
 flatfile_form = sg.FlexForm('Settlement Analyzer') 
@@ -470,7 +476,7 @@ overview_tab = get_overview(settlement_df)
 niro_tab = filter_niro_skus(finalized_report)
 hd_tab = filter_hd_skus(finalized_report)
 other_tab = filter_other_skus(finalized_report)
-refund_tab = get_refunds(settlement_df, finalized_report)
+#refund_tab = get_refunds(settlement_df, finalized_report)
 output_form= sg.FlexForm('Settlement Analyzer')
 layout = [
         [sg.Text('Please type a file prefix')],
