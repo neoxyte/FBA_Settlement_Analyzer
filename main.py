@@ -114,6 +114,7 @@ def get_average_fba_fees(settlement_df):
 def get_nonsales_revenue(settlement_df):
     '''Get revenue for the following: COMPENSATED_CLAWBACK, FREE_REPLACEMENT_REFUND_ITEMS, RefundCommission, RestockingFee, REVERSAL_REIMBURSEMENT,
     WAREHOUSE_DAMAGE, WAREHOUSE_DAMAGE_EXCEPTION, WAREHOUSE_LOST, WAREHOUSE_LOST_MANUAL '''
+    #these are non sale revenue by SKU
     ns_revenue = settlement_df.loc[(settlement_df['amount-description'] == 'COMPENSATED_CLAWBACK') | (settlement_df['amount-description'] == 'FREE_REPLACEMENT_REFUND_ITEMS') | (settlement_df['amount-description'] == 'RefundCommission') | (settlement_df['amount-description'] == 'REVERSAL_REIMBURSEMENT') | (settlement_df['amount-description'] == 'WAREHOUSE_DAMAGE') | (settlement_df['amount-description'] == 'WAREHOUSE_DAMAGE_EXCEPTION') | (settlement_df['amount-description'] == 'WAREHOUSE_LOST') |  (settlement_df['amount-description'] == 'WAREHOUSE_LOST_MANUAL')]
     ns_revenue = ns_revenue[['sku', 'amount']]
     ns_revenue = ns_revenue.groupby('sku').sum()
@@ -266,19 +267,6 @@ def rename_columns(settlement_analysis):
         "Total Cost": "Total COGS"})
     #make sure to rename columns differently if adding cost/advertising
     return new_df
-def get_non_skus(settlement_df):
-    '''Gets line items without a SKU  from the flat file. Such as Subscription, Monthly Storage, Reserve, Etc'''
-    nonskus= settlement_df.loc[(settlement_df['amount-description'] == 'Subscription Fee')|
-    (settlement_df['amount-description'] == 'Previous Reserve Amount Balance') | (settlement_df['amount-description'] == 'Current Reserve Amount') |
-    (settlement_df['amount-description'] == 'RemovalComplete') | (settlement_df['amount-description'] == 'Adjustment')|
-    (settlement_df['amount-description'] == 'DisposalComplete') | (settlement_df['amount-description'] == 'FBACustomerReturnPerUnitFee') |
-    (settlement_df['amount-description'] == 'Shipping label purchase') | (settlement_df['amount-description'] == 'Shipping label purchase for return') |
-    (settlement_df['amount-description'] == 'INCORRECT_FEES_NON_ITEMIZED') | (settlement_df['amount-description'] == 'FBAInboundTransportationFee')|
-    (settlement_df['amount-description'] == 'FBA Pick & Pack Fee') ]
-    nonskus = nonskus[['amount-description', 'amount']]
-    nonskus = nonskus.groupby('amount-description').sum()
-    nonskus = nonskus.loc[~(nonskus==0).all(axis=1)]
-    return nonskus
 
 def get_overview(settlement_df):
     '''Returns a dataframe with totals for everything'''
@@ -311,7 +299,7 @@ def filter_hd_skus(final_table_df):
     return final_table_df.filter(like = 'HD', axis=0)
 
 def filter_other_skus(final_table_df):
-    return final_table_df.filter(like = 'MED', axis=0)
+    return final_table_df.filter(like = 'MED' or "MD", axis=0)
 #add MD here
 
 def get_refunds(settlement_df, final_table_df):
