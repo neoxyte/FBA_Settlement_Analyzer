@@ -299,7 +299,7 @@ def filter_hd_skus(final_table_df):
     return final_table_df.filter(like = 'HD', axis=0)
 
 def filter_other_skus(final_table_df):
-    return final_table_df.filter(like = 'MED' or "MD", axis=0)
+    return final_table_df.filter(regex = r'MD|MED', axis=0)
 #add MD here
 
 def get_refunds(settlement_df, final_table_df):
