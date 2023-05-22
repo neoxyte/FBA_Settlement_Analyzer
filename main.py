@@ -128,9 +128,11 @@ def get_non_skus(settlement_df):
     (settlement_df['amount-description'] == 'DisposalComplete') | (settlement_df['amount-description'] == 'FBACustomerReturnPerUnitFee') |
     (settlement_df['amount-description'] == 'Shipping label purchase') | (settlement_df['amount-description'] == 'Shipping label purchase for return') |
     (settlement_df['amount-description'] == 'INCORRECT_FEES_NON_ITEMIZED') | (settlement_df['amount-description'] == 'FBAInboundTransportationFee')|
-    (settlement_df['amount-description'] == 'FBA Pick & Pack Fee') ]
+    (settlement_df['amount-description'] == 'FBA Pick & Pack Fee') |
+    (settlement_df['amount-description'] == 'StorageRenewalBilling')  ]
     nonskus = nonskus[['amount-description', 'amount']]
     nonskus = nonskus.groupby('amount-description').sum()
+    nonskus = nonskus.rename(columns={'StorageRenewalBilling':'Long-Term Storage Fee'}
     nonskus = nonskus.loc[~(nonskus==0).all(axis=1)]
     return nonskus
 
