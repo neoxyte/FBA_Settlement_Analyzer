@@ -47,7 +47,9 @@ def get_units_sold(settlement_df):
 def get_nonsales_units(settlement_df):
     '''Returns units taken from inventory and compensated but not as sale'''
     #ns_units = settlement_df.loc[(settlement_df['amount-description'] == 'WAREHOUSE_LOST') | (settlement_df['amount-description'] == 'WAREHOUSE_DAMAGE') | (settlement_df['amount-description'] == 'FREE_REPLACEMENT_REFUND_ITEMS')]
-    ns_units = settlement_df.loc[(settlement_df['amount-description'] == 'FREE_REPLACEMENT_REFUND_ITEMS') | (settlement_df['amount-description'] == 'RefundCommission') | (settlement_df['amount-description'] == 'REVERSAL_REIMBURSEMENT') | (settlement_df['amount-description'] == 'WAREHOUSE_DAMAGE') | (settlement_df['amount-description'] == 'WAREHOUSE_DAMAGE_EXCEPTION') | (settlement_df['amount-description'] == 'WAREHOUSE_LOST') |  (settlement_df['amount-description'] == 'WAREHOUSE_LOST_MANUAL') ]
+    ns_units = settlement_df.loc[(settlement_df['amount-description'] == 'FREE_REPLACEMENT_REFUND_ITEMS') | (settlement_df['amount-description'] == 'RefundCommission') | (settlement_df['amount-description'] == 'REVERSAL_REIMBURSEMENT') 
+                                 | (settlement_df['amount-description'] == 'WAREHOUSE_DAMAGE') | (settlement_df['amount-description'] == 'WAREHOUSE_DAMAGE_EXCEPTION') 
+                                 | (settlement_df['amount-description'] == 'WAREHOUSE_LOST') |  (settlement_df['amount-description'] == 'WAREHOUSE_LOST_MANUAL') ]
     ns_units = ns_units[['sku', 'quantity-purchased']]
     #clawback_units =settlement_df.loc[ (settlement_df['amount-description'] == 'COMPENSATED_CLAWBACK') ]
     #clawback_units = clawback_units[['sku', 'quantity-purchased']]
@@ -99,7 +101,8 @@ def get_commission_percent(settlement_df):
 
 def get_fba_fees(settlement_df):
     '''Get all FBA fees'''
-    fba_fees = settlement_df.loc[(settlement_df['amount-description'] == 'FBAPerOrderFulfillmentFee') | (settlement_df['amount-description'] == 'FBAPerUnitFulfillmentFee') | (settlement_df['amount-description'] == 'FBAWeightBasedFee')]
+    fba_fees = settlement_df.loc[(settlement_df['amount-description'] == 'FBAPerOrderFulfillmentFee') | (settlement_df['amount-description'] == 'FBAPerUnitFulfillmentFee')
+                                  | (settlement_df['amount-description'] == 'FBAWeightBasedFee') | (settlement_df['amount-description'] == 'FBAWeightBasedFee') ]
     fba_fees = fba_fees[['sku', 'amount']]
     fba_fees = fba_fees.groupby('sku').sum()
     return fba_fees.rename(columns={'amount':'FBA Fees'})
@@ -115,7 +118,11 @@ def get_nonsales_revenue(settlement_df):
     '''Get revenue for the following: COMPENSATED_CLAWBACK, FREE_REPLACEMENT_REFUND_ITEMS, RefundCommission, RestockingFee, REVERSAL_REIMBURSEMENT,
     WAREHOUSE_DAMAGE, WAREHOUSE_DAMAGE_EXCEPTION, WAREHOUSE_LOST, WAREHOUSE_LOST_MANUAL '''
     #these are non sale revenue by SKU
-    ns_revenue = settlement_df.loc[(settlement_df['amount-description'] == 'COMPENSATED_CLAWBACK') | (settlement_df['amount-description'] == 'FREE_REPLACEMENT_REFUND_ITEMS') | (settlement_df['amount-description'] == 'RefundCommission') | (settlement_df['amount-description'] == 'REVERSAL_REIMBURSEMENT') | (settlement_df['amount-description'] == 'WAREHOUSE_DAMAGE') | (settlement_df['amount-description'] == 'WAREHOUSE_DAMAGE_EXCEPTION') | (settlement_df['amount-description'] == 'WAREHOUSE_LOST') |  (settlement_df['amount-description'] == 'WAREHOUSE_LOST_MANUAL')]
+    ns_revenue = settlement_df.loc[(settlement_df['amount-description'] == 'COMPENSATED_CLAWBACK') | (settlement_df['amount-description'] == 'FREE_REPLACEMENT_REFUND_ITEMS')  
+                                   |(settlement_df['amount-description'] == 'RefundCommission') | (settlement_df['amount-description'] == 'REVERSAL_REIMBURSEMENT') | (settlement_df['amount-description'] == 'WAREHOUSE_DAMAGE')
+                                    | (settlement_df['amount-description'] == 'WAREHOUSE_DAMAGE_EXCEPTION') | (settlement_df['amount-description'] == 'WAREHOUSE_LOST') 
+                                    |  (settlement_df['amount-description'] == 'WAREHOUSE_LOST_MANUAL') | (settlement_df['amount-description'] == 'VariableClosingFee') 
+                                    | ((settlement_df['amount-description'] == 'RestockingFee') )]
     ns_revenue = ns_revenue[['sku', 'amount']]
     ns_revenue = ns_revenue.groupby('sku').sum()
     return ns_revenue.rename(columns={'amount':'Non-Sales Revenue'})
@@ -132,7 +139,7 @@ def get_non_skus(settlement_df):
     (settlement_df['amount-description'] == 'StorageRenewalBilling')  ]
     nonskus = nonskus[['amount-description', 'amount']]
     nonskus = nonskus.groupby('amount-description').sum()
-    nonskus = nonskus.rename(columns={'StorageRenewalBilling':'Long-Term Storage Fee'}
+    nonskus = nonskus.rename(index={'StorageRenewalBilling':'Long-Term Storage Fee'})
     nonskus = nonskus.loc[~(nonskus==0).all(axis=1)]
     return nonskus
 
@@ -146,6 +153,25 @@ def get_storage(settlement_df):
 def monthly_storage_charged(settlement_df):
     '''Returns True/False if monthly storaged was charged'''
     return get_storage(settlement_df) != 0
+
+def lts_charged(settlement_df):
+    '''Returns if long term storage was charged'''
+    longterm_storage_fee = settlement_df.loc[(settlement_df['amount-description'] == 'StorageRenewalBilling')]
+    longterm_storage_fee = longterm_storage_fee[['amount-description', 'amount']]
+    longterm_storage_fee = longterm_storage_fee['amount'].sum()
+    return longterm_storage_fee != 0
+
+def get_lts_with_sku(lts_df):
+    '''Returns a data frame with long term storage by SKU'''
+    sku_fnsku = manage_fba_inventory_df[['sku', 'fnsku']]
+    sku_fnsku = sku_fnsku.groupby('fnsku').sum()
+    lts_storage = lts_df[['fnsku', 'amount-charged']]
+    lts_storage = lts_storage.groupby('fnsku').sum()
+    lts_by_sku= pd.concat((sku_fnsku, lts_storage), axis=1)
+    lts_by_sku = lts_by_sku[lts_by_sku['amount-charged'].notna()]
+    lts_by_sku = lts_by_sku.rename(columns={'amount-charged':'LTS Fee'})
+    lts_by_sku = lts_by_sku.groupby('sku').sum() * -1
+    return lts_by_sku
 
 def get_storage_with_sku(monthly_storage_df, manage_fba_inventory_df):
     '''Returns a data frame with monthly storage by SKU'''
@@ -207,8 +233,12 @@ def main_table(settlement_df):
             settlement_analysis['Total Return'] = settlement_analysis['Amazon Revenue'] + settlement_analysis['Storage Fee'] 
         else:
             settlement_analysis['Total Return'] = settlement_analysis['Amazon Revenue']
-    #settlement_analysis['Total Units'].fillna(0, inplace=True)
-    #DEBUG1
+    if lts_charged(settlement_df):
+        settlement_analysis = pd.concat([settlement_analysis, lts_sku_df], axis=1)
+        #settlement_analysis.to_csv("debug.csv")
+        #print(settlement_analysis.columns.tolist())
+        settlement_analysis['LTS Fee'] = settlement_analysis['LTS Fee'].fillna(0)
+        settlement_analysis['Total Return'] = settlement_analysis['Total Return']  + settlement_analysis['LTS Fee']
     settlement_analysis['Return Per Unit'] = settlement_analysis['Total Return'] /  settlement_analysis['Total Units']
     if adding_advertising:
         settlement_analysis['Return Per Unit (w/o Advertising)'] = settlement_analysis['Total (w/o Advertising)'] / settlement_analysis['Total Units']
@@ -424,6 +454,19 @@ if monthly_storage_charged(settlement_df):
     storage_form.close()
     monthly_storage_df =  pd.read_csv(storage_report, encoding='latin1')
     storage_sku_df = get_storage_with_sku(monthly_storage_df, manage_fba_inventory_df)
+if lts_charged(settlement_df):
+    storage_form = sg.FlexForm('Settlement Analyzer') 
+    storage_form_layout = [
+            [sg.Text('Long-Term Storage Detected. Please select appropiate LTS report (15th of current month, Inventory Surcharge Rep)')],
+            [sg.Text('Statement Start Date: ' + statement_timeframe[0])],
+            [sg.Text('Long-Term Storage Report:', size=(50, 1)), sg.FileBrowse()],
+            [sg.Submit(), sg.Cancel()]
+            ]
+    button, storagefilename = storage_form.Layout(storage_form_layout).Read() 
+    lts_report= storagefilename['Browse']
+    storage_form.close()
+    lts_df =  pd.read_csv(lts_report, encoding='latin1')
+    lts_sku_df = get_lts_with_sku(lts_df)
 option_form = sg.FlexForm('Settlement Analyzer') 
 layout = [
           [sg.Text('Select the following optional parameters')],
