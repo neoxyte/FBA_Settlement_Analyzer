@@ -377,9 +377,10 @@ def export_report(filename):
     writer = pd.ExcelWriter(filename + ".xlsx", engine='xlsxwriter')
     finalized_report.to_excel(writer, sheet_name='Sales')
     overview_tab.to_excel(writer, sheet_name='Overview')
-    niro_tab.to_excel(writer, sheet_name='NIRO')
-    hd_tab.to_excel(writer, sheet_name='HD')
-    other_tab.to_excel(writer, sheet_name='Other')
+    #turning off other tabs for now
+    #niro_tab.to_excel(writer, sheet_name='NIRO')
+    #hd_tab.to_excel(writer, sheet_name='HD')
+    #other_tab.to_excel(writer, sheet_name='Other')
     #refund_tab.to_excel(writer, sheet_name="Refunds")
     writer.close()
 
