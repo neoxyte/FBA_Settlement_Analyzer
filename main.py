@@ -49,7 +49,8 @@ def get_nonsales_units(settlement_df):
     #ns_units = settlement_df.loc[(settlement_df['amount-description'] == 'WAREHOUSE_LOST') | (settlement_df['amount-description'] == 'WAREHOUSE_DAMAGE') | (settlement_df['amount-description'] == 'FREE_REPLACEMENT_REFUND_ITEMS')]
     ns_units = settlement_df.loc[(settlement_df['amount-description'] == 'FREE_REPLACEMENT_REFUND_ITEMS') | (settlement_df['amount-description'] == 'RefundCommission') | (settlement_df['amount-description'] == 'REVERSAL_REIMBURSEMENT') 
                                  | (settlement_df['amount-description'] == 'WAREHOUSE_DAMAGE') | (settlement_df['amount-description'] == 'WAREHOUSE_DAMAGE_EXCEPTION') 
-                                 | (settlement_df['amount-description'] == 'WAREHOUSE_LOST') |  (settlement_df['amount-description'] == 'WAREHOUSE_LOST_MANUAL') ]
+                                 | (settlement_df['amount-description'] == 'WAREHOUSE_LOST') |  (settlement_df['amount-description'] == 'WAREHOUSE_LOST_MANUAL') |   (settlement_df['amount-description'] == 'CS_ERROR_ITEMS')|
+                                    (settlement_df['amount-description'] == 'MISSING_FROM_INBOUND')]
     ns_units = ns_units[['sku', 'quantity-purchased']]
     #clawback_units =settlement_df.loc[ (settlement_df['amount-description'] == 'COMPENSATED_CLAWBACK') ]
     #clawback_units = clawback_units[['sku', 'quantity-purchased']]
@@ -122,7 +123,12 @@ def get_nonsales_revenue(settlement_df):
                                    |(settlement_df['amount-description'] == 'RefundCommission') | (settlement_df['amount-description'] == 'REVERSAL_REIMBURSEMENT') | (settlement_df['amount-description'] == 'WAREHOUSE_DAMAGE')
                                     | (settlement_df['amount-description'] == 'WAREHOUSE_DAMAGE_EXCEPTION') | (settlement_df['amount-description'] == 'WAREHOUSE_LOST') 
                                     |  (settlement_df['amount-description'] == 'WAREHOUSE_LOST_MANUAL') | (settlement_df['amount-description'] == 'VariableClosingFee') 
-                                    | ((settlement_df['amount-description'] == 'RestockingFee') )]
+                                    | (settlement_df['amount-description'] == 'ShippingChargeback') 
+                                    | (settlement_df['amount-description'] == 'Shipping') 
+                                    | (settlement_df['amount-description'] == 'MISSING_FROM_INBOUND') 
+                                    | (settlement_df['amount-description'] == 'CS_ERROR_ITEMS')  
+                                    | (settlement_df['amount-description'] == 'Goodwill') 
+                                    | (settlement_df['amount-description'] == 'ShippingHB') ]
     ns_revenue = ns_revenue[['sku', 'amount']]
     ns_revenue = ns_revenue.groupby('sku').sum()
     return ns_revenue.rename(columns={'amount':'Non-Sales Revenue'})
@@ -136,7 +142,10 @@ def get_non_skus(settlement_df):
     (settlement_df['amount-description'] == 'Shipping label purchase') | (settlement_df['amount-description'] == 'Shipping label purchase for return') |
     (settlement_df['amount-description'] == 'INCORRECT_FEES_NON_ITEMIZED') | (settlement_df['amount-description'] == 'FBAInboundTransportationFee')|
     (settlement_df['amount-description'] == 'FBA Pick & Pack Fee') |
-    (settlement_df['amount-description'] == 'StorageRenewalBilling')  ]
+    (settlement_df['amount-description'] == 'StorageRenewalBilling')  |
+    (settlement_df['amount-description'] == 'Manual Processing Fee')  |
+    (settlement_df['amount-description'] == 'Manual Processing Fee Reimbursement')  |
+    (settlement_df['amount-description'] == 'NonSubscriptionFeeAdj')]
     nonskus = nonskus[['amount-description', 'amount']]
     nonskus = nonskus.groupby('amount-description').sum()
     nonskus = nonskus.rename(index={'StorageRenewalBilling':'Long-Term Storage Fee'})
