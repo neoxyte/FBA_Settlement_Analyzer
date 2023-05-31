@@ -480,7 +480,7 @@ if lts_charged(settlement_df):
 option_form = sg.FlexForm('Settlement Analyzer') 
 layout = [
           [sg.Text('Select the following optional parameters')],
-          [sg.Radio("Use Helium 10 cost to calculate profit", "Radio1", default=False)], 
+          [sg.Radio("Use cost file to calculate profit/roi", "Radio1", default=False)], 
           [sg.Radio("Add Advertising Report", "Radio2", default=False)],
           [sg.Submit(), sg.Cancel()]
          ]
@@ -491,7 +491,7 @@ adding_advertising = options[1]
 if adding_advertising:
     advertising_form = sg.FlexForm('Settlement Analyzer')
     layout = [
-            [sg.Text('Please select appropiate Advertising Report')],
+            [sg.Text('Please select appropiate Advertising Report (sponsored product)')],
             [sg.Text('Statement period start time: ' + statement_timeframe[0])],
             [sg.Text('Statement period end time: ' + statement_timeframe[1])],
             [sg.Text('Amazon Advertising Report', size=(50, 1)), sg.FileBrowse()],
@@ -505,8 +505,8 @@ if adding_advertising:
 if adding_cost:
     cost_form = sg.FlexForm('Settlement Analyzer')
     layout = [
-            [sg.Text('Please select latest helium10 report')],
-            [sg.Text('Helium10 COGS report:', size=(50, 1)), sg.FileBrowse()],
+            [sg.Text('Please select formatted cost.csv file')],
+            [sg.Text('Cost.csv file location:', size=(50, 1)), sg.FileBrowse()],
             [sg.Submit(), sg.Cancel()]
             ]
     button, cost_form_input =  cost_form.Layout(layout).Read() 
