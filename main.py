@@ -341,7 +341,6 @@ def filter_hd_skus(final_table_df):
 
 def filter_other_skus(final_table_df):
     return final_table_df.filter(regex = r'MD|MED', axis=0)
-#add MD here
 
 def get_refunds(settlement_df, final_table_df):
     '''Returns a dataframe showing transcation type refund only'''
