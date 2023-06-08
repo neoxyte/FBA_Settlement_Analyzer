@@ -392,7 +392,7 @@ layout = [
 button, filename = flatfile_form.Layout(layout).Read() 
 flat_file = filename['Browse']
 flatfile_form.close()
-settlement_df = pd.read_table(flat_file, sep='\t', dtype=dtypes)
+settlement_df = pd.read_csv(flat_file, sep='\t', dtype=dtypes)
 #invoiced_form = sg.FlexForm('Settlement Analyzer') 
 #layout = [
 #          [sg.Text('Would you like to add invoiced orders too?')],
