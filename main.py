@@ -128,7 +128,8 @@ def get_nonsales_revenue(settlement_df):
                                     | (settlement_df['amount-description'] == 'MISSING_FROM_INBOUND') 
                                     | (settlement_df['amount-description'] == 'CS_ERROR_ITEMS')  
                                     | (settlement_df['amount-description'] == 'Goodwill') 
-                                    | (settlement_df['amount-description'] == 'ShippingHB') ]
+                                    | (settlement_df['amount-description'] == 'ShippingHB') 
+                                      (settlement_df['amount-description'] == 'RestockingFee']
     ns_revenue = ns_revenue[['sku', 'amount']]
     ns_revenue = ns_revenue.groupby('sku').sum()
     return ns_revenue.rename(columns={'amount':'Non-Sales Revenue'})
