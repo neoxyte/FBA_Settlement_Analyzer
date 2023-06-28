@@ -39,7 +39,7 @@ dtypes = {
 
 def get_units_sold(settlement_df):
     '''Get's all units sold (only units charged a comission via AFN)'''
-    units_sold = settlement_df.loc[(settlement_df['fulfillment-id']== 'AFN') & (settlement_df['amount-description']=='Commission')]
+    units_sold = settlement_df.loc[(settlement_df['fulfillment-id']== 'AFN') & (settlement_df['amount-description']=='Principal')]
     units_sold = units_sold[['sku','quantity-purchased']]
     units_sold = units_sold.groupby('sku').sum()
     return units_sold.rename(columns={'quantity-purchased':'Units Sold'})
