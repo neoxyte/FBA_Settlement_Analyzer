@@ -89,6 +89,8 @@ def get_commission(settlement_df):
 def get_average_commision_per_unit(settlement_df):
     '''Returns Average Comission per Unit'''
     units = get_units_sold(settlement_df)
+    mf_units = get_merchantfulfilled_units(settlement_df)
+    #TODO add two dataframes together
     commission = get_commission(settlement_df)
     commission['Commision Per Unit'] = commission['Commission'] / units['Units Sold']
     return commission['Commision Per Unit']
